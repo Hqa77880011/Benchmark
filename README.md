@@ -51,11 +51,17 @@ unzip data.zip -d ./data
 
 \# 示例：使用 YOLO 模型检测图像
 
-python yolo/detect.py --source ./data/images --weights yolo/best.pt
+python test.py
+
+\# 示例：使用 Swin-unet 模型分割图像
+
+python test.py
 
 \# 示例：使用 SAM 模型分割图像
 
-python sam/predict.py --input ./data/images --output ./results
+python helpers/extract_embeddings.py --checkpoint-path sam_vit_h_4b8939.pth --dataset-folder data 
+
+python helpers/generate_onnx.py --checkpoint-path sam_vit_h_4b8939.pth --onnx-model-path ./sam_onnx.onnx --orig-im-size 360 360
 
 2️⃣ 使用数据训练你自己的模型
 
@@ -63,11 +69,11 @@ bash
 
 \# 示例：训练 YOLO 模型
 
-python yolo/train.py --data ./data --epochs 100
+python yolo/trains.py
 
-\# 示例：训练 SAM 模型
+\# 示例：训练 Swin-unet 模型
 
-python sam/train.py --data ./data --epochs 50
+python train.py --output_dir ./model_out/datasets --dataset datasets --img_size 224 --batch_size 32 --cfg configs/swin_tiny_patch4_window7_224_lite.yaml --root_path /media/aicvi/11111bdb-a0c7-4342-9791-36af7eb70fc0/NNUNET_OUTPUT/nnunet_preprocessed/Dataset001_mm/nnUNetPlans_2d_split
 
 📈 模型评估
 
