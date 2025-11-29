@@ -1,104 +1,102 @@
-本项目包含基于 YOLO、SAM、Swin-UNet (Transformer) 等深度学习模型的目标检测与图像分割实现。我们提供了完整的数据与训练好的模型，方便你快速测试或二次训练。
+﻿
+Project Overview
 
-📂 项目结构
+This project includes implementations of object detection and image segmentation based on deep learning models such as YOLO, SAM, and Swin-UNet (Transformer). We provide complete datasets and pre-trained models to help you quickly test or retrain the system.
 
-├── data.zip # 数据集压缩包（需解压）
+Project Structure
 
-├── yolo/ # YOLO 模型及权重文件
+├── data.zip                # Dataset archive (needs to be extracted)
 
-├── sam/ # SAM (Segment Anything Model) 模型及脚本
+├── yolo/                   # YOLO model and weight files
 
-├── unet/ # Swin-UNet 结构模型及相关代码
+├── sam/                    # SAM (Segment Anything Model) and scripts
 
-├── compute.py # 计算指标的代码
+├── unet/                   # Swin-UNet Transformer-based segmentation model
 
-└── README.md # 项目说明文件
+├── compute.py              # Evaluation metrics calculation script
 
-📦 数据说明
+└── README.md               # Project documentation
 
-所有数据存放在 data.zip 文件中。请先解压该文件：
+Data Information
 
-
+All data are stored in data.zip. Please extract the file before use:
 
 unzip data.zip -d ./data
 
-解压后目录结构如下：
-
-
+After extraction, the structure becomes:
 
 ./data/
 
-├── images/ # 原始图像
+├── images/     # Raw images
 
-├── masks/ # 分割标签
+├── masks/      # Segmentation masks
 
-🧩 模型说明
+Model Description
 
-我们在以下文件夹中提供了训练好的模型权重：
+Pre-trained model weights are provided in the following folders:
 
-| 模型类型 | 文件夹路径 | 说明  |
-| --- | --- | --- |
-| YOLO | yolo/ | 目标检测模型，支持多类别检测 |
-| SAM | sam/ | 分割模型，可对任意物体生成 mask |
-| Swin-UNet | unet/ | 基于 Transformer 的视觉分割模型 |
+Model Type    Path     Description
 
-你可以直接使用这些模型在你的数据上进行测试，也可以基于我们提供的数据进行重新训练。
+YOLO          yolo/    Object detection model supporting multi-class detection
 
-🚀 快速开始
+SAM           sam/     Segmentation model that can generate masks for arbitrary objects
 
-1️⃣ 使用预训练模型进行测试
+Swin-UNet     unet/    Transformer-based image segmentation model
 
+You may directly test these models on your images or retrain them using our dataset.
 
-\# 示例：使用 YOLO 模型检测图像
+Quick Start
 
-python test.py
+1\. Use Pre-trained Models
 
-\# 示例：使用 Swin-unet 模型分割图像
+Example: YOLO detection
 
 python test.py
 
-\# 示例：使用 SAM 模型分割图像
+Example: Swin-UNet segmentation
 
-python helpers/extract_embeddings.py --checkpoint-path sam_vit_h_4b8939.pth --dataset-folder data 
+python test.py
 
-python helpers/generate_onnx.py --checkpoint-path sam_vit_h_4b8939.pth --onnx-model-path ./sam_onnx.onnx --orig-im-size 360 360
+Example: SAM segmentation
 
-2️⃣ 使用数据训练你自己的模型
+python helpers/extract\_embeddings.py --checkpoint-path sam\_vit\_h\_4b8939.pth --dataset-folder data
 
-bash
+python helpers/generate\_onnx.py --checkpoint-path sam\_vit\_h\_4b8939.pth --onnx-model-path ./sam\_onnx.onnx --orig-im-size 360 360
 
-\# 示例：训练 YOLO 模型
+2\. Train Your Own Models
+
+Example: Train YOLO
 
 python yolo/trains.py
 
-\# 示例：训练 Swin-unet 模型
+Example: Train Swin-UNet
 
-python train.py --output_dir ./model_out/datasets --dataset datasets --img_size 224 --batch_size 32 --cfg configs/swin_tiny_patch4_window7_224_lite.yaml --root_path /media/aicvi/11111bdb-a0c7-4342-9791-36af7eb70fc0/NNUNET_OUTPUT/nnunet_preprocessed/Dataset001_mm/nnUNetPlans_2d_split
+python train.py --output\_dir ./model\_out/datasets --dataset datasets --img\_size 224 --batch\_size 32 --cfg configs/swin\_tiny\_patch4\_window7\_224\_lite.yaml --root\_path /media/aicvi/11111bdb-a0c7-4342-9791-36af7eb70fc0/NNUNET\_OUTPUT/nnunet\_preprocessed/Dataset001\_mm/nnUNetPlans\_2d\_split
 
-📈 模型评估
+Model Evaluation
 
-我们提供了一个评估脚本 compute.py，可计算以下指标：
+We provide compute.py to calculate common segmentation metrics:
 
-IoU 
+\- IoU
 
-Dice 系数
+\- Dice coefficient
 
-Precision
+\- Precision
 
-Recall
+\- Recall
 
-示例：
-
-
+Example:
 
 python compute.py --pred ./results/masks --gt ./data/masks
 
-💡 项目特点
+Project Features
 
-✅ 支持 YOLO / SAM / Transformer 三种模型架构
+✓ Supports YOLO / SAM / Transformer architectures  
 
-✅ 提供 预训练模型权重
+✓ Includes pre-trained model weights  
 
-✅ 提供 可复现的数据集
+✓ Provides reproducible datasets  
 
-✅ 适合 自定义数据的训练与验证
+✓ Suitable for training and validating on custom data  
+
+
