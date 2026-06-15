@@ -1,0 +1,80 @@
+# =============================================================================
+# LithoDefectV1 Pipeline Configuration
+# =============================================================================
+# This single YAML file controls the entire synthesis pipeline.
+# Edit paths and parameters below, then run: python run_pipeline.py
+# =============================================================================
+
+# --- Paths ---
+paths:
+  defect_img_dir: "data/defects/images"       # Seed defect images
+  defect_mask_dir: "data/defects/masks"        # Seed defect masks
+  bg_dir: "data/backgrounds"                   # Background images (256x256)
+  output_root: "output/synthetic_defects"      # Output: synthetic data
+  split_output: "output/synthetic_defects_split"  # Output: split data
+  yolo_output: "output/synthetic_yolo"         # Output: YOLO format
+  swinunet_output: "output/swin_unet_data"     # Output: Swin-UNet format
+
+# --- Source Defect → Target Category Mapping ---
+# Left: source defect folder name
+# Right: target LithoDefectV1 categories (round-robin assignment)
+category_mapping:
+  arching:  ["ArchDeform", "Spindle"]
+  particle: ["ParticleContam", "Block"]
+  peeling:  ["Flake", "Droplet"]
+  residue:  ["ResidueLeft", "Needle"]
+
+# --- Background Groups ---
+# private: used for train/val/test_private (typically fab backgrounds)
+# public:  used for test_public (typically open-source backgrounds)
+bg_groups:
+  private:
+    prefixes: ["luhu_", "chip_"]   # Filename prefixes for private backgrounds
+    num_aug: 50                     # Samples per seed defect
+  public:
+    prefixes: ["shen_"]             # Filename prefixes for public backgrounds
+    num_aug: 30                     # Samples per seed defect
+
+# --- Synthesis Parameters ---
+synthesis_params:
+  enable_feather: true
+  feather_kernel_size: 5
+  enable_hflip: true
+  enable_vflip: true
+  enable_rotation: true
+  scale_range: [0.7, 1.3]
+  enable_distortion: true
+  distortion_types: ["stretch", "perspective", "barrel"]
+  stretch_range: [0.7, 1.4]
+  perspective_offset: 0.1
+  barrel_k1_range: [-0.3, 0.3]
+  barrel_k2_range: [-0.1, 0.1]
+  avoid_center: true
+  center_region_ratio: 0.5
+
+# --- Dataset Split Ratios ---
+split:
+  train_ratio: 0.70
+  val_ratio: 0.10
+  test_private_ratio: 0.10   # Private backgrounds only
+  test_public_ratio: 0.10    # Public backgrounds only
+  seed: 42
+
+# --- Class Name → Integer ID ---
+class_mapping:
+  ArchDeform: 0
+  Block: 1
+  Droplet: 2
+  Flake: 3
+  Needle: 4
+  ParticleContam: 5
+  ResidueLeft: 6
+  Spindle: 7
+
+# --- Pipeline Control ---
+# Set individual steps to false to skip them
+pipeline:
+  run_synthesis: true      # Step 1: Generate synthetic images
+  run_split: true           # Step 2: Train/val/test split
+  run_export_yolo: true     # Step 3a: Export to YOLO format
+  run_export_swinunet: true # Step 3b: Export to Swin-UNet format
