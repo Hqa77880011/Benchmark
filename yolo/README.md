@@ -4,7 +4,7 @@
       <img width="100%" src="https://raw.githubusercontent.com/ultralytics/assets/main/yolov8/banner-yolov8.png" alt="Ultralytics YOLO banner"></a>
   </p>
 
-[中文](https://docs.ultralytics.com/zh) | [한국어](https://docs.ultralytics.com/ko) | [日本語](https://docs.ultralytics.com/ja) | [Русский](https://docs.ultralytics.com/ru) | [Deutsch](https://docs.ultralytics.com/de) | [Français](https://docs.ultralytics.com/fr) | [Español](https://docs.ultralytics.com/es) | [Português](https://docs.ultralytics.com/pt) | [Türkçe](https://docs.ultralytics.com/tr) | [Tiếng Việt](https://docs.ultralytics.com/vi) | [العربية](https://docs.ultralytics.com/ar) <br>
+[Chinese](https://docs.ultralytics.com/zh) | [Korean](https://docs.ultralytics.com/ko) | [Japanese](https://docs.ultralytics.com/ja) | [Russian](https://docs.ultralytics.com/ru) | [German](https://docs.ultralytics.com/de) | [French](https://docs.ultralytics.com/fr) | [Spanish](https://docs.ultralytics.com/es) | [Portuguese](https://docs.ultralytics.com/pt) | [Turkish](https://docs.ultralytics.com/tr) | [Vietnamese](https://docs.ultralytics.com/vi) | [Arabic](https://docs.ultralytics.com/ar) <br>
 
 <div>
     <a href="https://github.com/ultralytics/ultralytics/actions/workflows/ci.yml"><img src="https://github.com/ultralytics/ultralytics/actions/workflows/ci.yml/badge.svg" alt="Ultralytics CI"></a>

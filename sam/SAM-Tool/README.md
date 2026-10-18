@@ -1,11 +1,12 @@
 # SAM-Labelimg
-利用Segment Anything(SAM)模型进行快速标注
 
-#### 1.下载项目
+Fast annotation with the Segment Anything Model (SAM).
 
-项目1：https://github.com/zhouayi/SAM-Tool
+## 1. Obtain the Projects
 
-项目2：https://github.com/facebookresearch/segment-anything
+Project 1: [SAM-Tool](https://github.com/zhouayi/SAM-Tool)
+
+Project 2: [Segment Anything](https://github.com/facebookresearch/segment-anything)
 
 ```bash
 git clone https://github.com/zhouayi/SAM-Tool.git
@@ -15,85 +16,104 @@ cd segment-anything
 pip install -e .
 ```
 
-下载`SAM`模型：https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+Download the [SAM checkpoint](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth).
 
-#### 2.把数据放置在`<dataset_path>/images/*`这样的路径中，并创建空文件夹`<dataset_path>/embeddings`
+## 2. Prepare the Dataset
 
-#### 3.将项目1中的`helpers`文件夹复制到项目2的主目录下
+Place images under `<dataset_path>/images/*` and create an empty directory at `<dataset_path>/embeddings`.
 
-##### 3.1 运行`extrac_embeddings.py`文件来提取图片的`embedding`
+## 3. Prepare Image Embeddings and the ONNX Model
+
+Copy the `helpers` folder from Project 1 into the root directory of Project 2.
+
+### 3.1 Extract Image Embeddings
+
+Run `extract_embeddings.py` to extract image embeddings:
 
 ```bash
-# cd到项目2的主目录下
+# Run from the root directory of Project 2.
 python helpers\extract_embeddings.py --checkpoint-path sam_vit_h_4b8939.pth --dataset-folder <dataset_path> --device cpu
 ```
 
-- `checkpoint-path`：上面下载好的`SAM`模型路径
-- `dataset-folder`：数据路径
-- `device`：默认`cuda`，没有`GPU`用`cpu`也行的，就是速度挺慢的
+- `checkpoint-path`: path to the downloaded SAM checkpoint.
+- `dataset-folder`: path to the dataset.
+- `device`: defaults to `cuda`. Use `cpu` if a GPU is unavailable; processing will be slower.
 
-运行完毕后，`<dataset_path>/embeddings`下会生成相应的npy文件
+The corresponding NPY files will be written to `<dataset_path>/embeddings`.
 
-##### 3.2 运行`generate_onnx.py`将`pth`文件转换为`onnx`模型文件
+### 3.2 Export the Checkpoint to ONNX
+
+Run `generate_onnx.py` to convert the PTH checkpoint to an ONNX model:
 
 ```bash
-# cd到项目2的主目录下
+# Run from the root directory of Project 2.
 python helpers\generate_onnx.py --checkpoint-path sam_vit_h_4b8939.pth --onnx-model-path ./sam_onnx.onnx --orig-im-size 1080 1920
 ```
 
-- `checkpoint-path`：同样的`SAM`模型路径
+- `checkpoint-path`: path to the same SAM checkpoint.
+- `onnx-model-path`: destination path for the exported ONNX model.
+- `orig-im-size`: original image dimensions in `(height, width)` order.
 
-- `onnx-model-path`：得到的`onnx`模型保存路径
+**The provided conversion code does not support dynamic original image dimensions.** If the dataset contains different image sizes, export separate ONNX models with the appropriate `orig-im-size` values.
 
-- `orig-im-size`：数据中图片的尺寸大小`（height, width）`
+## 4. Annotate Images
 
-【**注意：提供给的代码转换得到的`onnx`模型并不支持动态输入大小，所以如果你的数据集中图片尺寸不一，那么可选方案是以不同的`orig-im-size`参数导出不同的`onnx`模型供后续使用**】
-
-#### 4.将生成的`sam_onnx.onnx`模型复制到项目1的主目录下，运行`segment_anything_annotator.py`进行标注
+Copy the generated `sam_onnx.onnx` file into the root directory of Project 1, then run `segment_anything_annotator.py`:
 
 ```bash
-# cd到项目1的主目录下
+# Run from the root directory of Project 1.
 python segment_anything_annotator.py --onnx-model-path sam_onnx.onnx --dataset-path <dataset_path> --categories cat,dog
 ```
 
-- `onnx-model-path`：导出的`onnx`模型路径
-- `dataset-path`：数据路径
-- `categories`：数据集的类别（每个类别以`,`分割，不要有空格）
+- `onnx-model-path`: path to the exported ONNX model.
+- `dataset-path`: path to the dataset.
+- `categories`: comma-separated category names without spaces.
 
-在对象位置出点击鼠标左键为增加掩码，点击右键为去掉该位置掩码。
+Left-click on an object to add a positive mask prompt; right-click to add a negative prompt.
 
-其他使用快捷键有：
+Keyboard shortcuts:
 
-| `Esc`：退出app  | `a`：前一张图片 | `d`：下一张图片 |
-| :-------------- | :-------------- | :-------------- |
-| `k`：调低透明度 | `l`：调高透明度 | `n`：添加对象   |
-| `r`：重置       | `Ctrl+s`：保存  |                 |
+| Key | Action |
+| --- | --- |
+| `Esc` | Exit the application |
+| `a` | Previous image |
+| `d` | Next image |
+| `k` | Decrease transparency |
+| `l` | Increase transparency |
+| `n` | Add an object |
+| `r` | Reset |
+| `Ctrl+s` | Save |
+| `Ctrl+z` | Undo the last annotated object |
 
-![image](assets/catdog.gif)
+![Interactive annotation example](assets/catdog.gif)
 
-最后生成的标注文件为`coco`格式，保存在`<dataset_path>/annotations.json`。
+Annotations are saved in COCO format at `<dataset_path>/annotations.json`.
 
-#### 5.检查标注结果
+## 5. Inspect Annotations
+
 ```bash
 python cocoviewer.py -i <dataset_path> -a <dataset_path>\annotations.json
 ```
-![image](assets/catdog.png)
-#### 6.其他
 
-- [ ] 修改标注框线条的宽度的代码位置
+![Annotation viewer example](assets/catdog.png)
+
+## 6. Customize the Display
+
+Adjust the annotation box width and mask transparency in `salt/display_utils.py`. The following snippet illustrates these settings:
 
 ```python
-# salt/displat_utils.py
+# salt/display_utils.py
 class DisplayUtils:
     def __init__(self):
-        self.transparency = 0.65 # 默认的掩码透明度
-        self.box_width = 2 # 默认的边界框线条宽度
+        self.transparency = 0.65 # Example mask transparency setting
+        self.box_width = 2 # Bounding box line width
 ```
 
-- [ ] 修改标注文本的格式的代码位置
+To change the annotation text format, edit `draw_box_on_image` in the same file:
 
 ```python
-# salt/displat_utils.py
+# salt/display_utils.py
+
 def draw_box_on_image(self, image, categories, ann, color):
     x, y, w, h = ann["bbox"]
     x, y, w, h = int(x), int(y), int(w), int(h)
@@ -107,11 +127,11 @@ def draw_box_on_image(self, image, categories, ann, color):
     cv2.putText(image, text, (x, y + txt_size[1]), font, 1.5, txt_color, thickness=5)
     return image
 ```
-- [ ] 2023.04.14新增加撤销上一个标注对象功能，快捷键Ctrl+z
 
-## Reference
-https://github.com/facebookresearch/segment-anything 
+Undoing the last annotated object with `Ctrl+z` was added on 2023-04-14.
 
-https://github.com/anuragxel/salt
+## References
 
-https://github.com/trsvchn/coco-viewer
+- [Segment Anything](https://github.com/facebookresearch/segment-anything)
+- [SALT](https://github.com/anuragxel/salt)
+- [COCO Viewer](https://github.com/trsvchn/coco-viewer)

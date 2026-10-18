@@ -1,39 +1,39 @@
-# 复现说明与本次维护范围
+# Reproducibility Notes and Maintenance Scope
 
-状态：论文大修返修已完成，审稿中。本页记录当前代码与论文实验的关系，不改变历史实验记录。
+Status: the manuscript's major revision has been completed, and the manuscript remains under review. This page documents the relationship between the current code and the paper's experiments without changing historical experimental records.
 
-## 论文与代码的对应关系
+## Relationship Between the Paper and the Code
 
-- 修订稿报告 Train 2,518 / Open-test 1,082；Re-synth-test 300；Fab-test 92。SAM 使用 Open-test 129 张子集及另两套完整测试集。
-- 默认合成配置是素材到数据的可运行工具，样本数由素材数量和增强次数决定，不保证重新生成恰好 3,600 张。
-- 合成工具的 70/10/10/10 划分与论文 7:3 划分不是同一份索引。`private/public` 表示合成背景来源；`test_private` 不是真实 Fab-test。
-- 当前缺少论文逐样本划分索引、完整逐样本预测与全部运行环境，因此 README 的结果表是修订稿转录，不是本次运行结果。
+- The revised manuscript reports 2,518 Train images, 1,082 Open-test images, 300 Re-synth-test images, and 92 Fab-test images. SAM uses a subset of 129 Open-test images and the other two complete test sets.
+- The default synthesis configuration provides a runnable workflow from source material to generated data. The sample count depends on the amount of source material and the number of augmentations; it does not guarantee regeneration of exactly 3,600 images.
+- The synthesis utility's 70/10/10/10 split does not use the same indices as the paper's 7:3 split. `private/public` denotes synthetic background sources; `test_private` is not the real Fab-test set.
+- The paper's sample-level split indices, complete per-sample predictions, and full execution environment are currently unavailable in this repository. The README results table is therefore a transcription of the revised manuscript, not the output of this maintenance run.
 
-## 修复与历史结果边界
+## Fixes and the Boundary of Historical Results
 
-原 `unet/trainer.py` 的验证加载器把 `db_train` 作为输入，且验证变换包含随机增强。当前已改为独立验证集及确定性预处理。该代码缺陷会使使用旧入口运行时的验证损失和最佳权重选择受到训练样本影响。现有仓库本身不足以证明论文训练时是否使用了完全相同的入口，不能据此推断历史模型已按修复后的协议训练。
+The original validation loader in `unet/trainer.py` used `db_train` as its input, and validation transforms included random augmentation. The current implementation uses an independent validation set and deterministic preprocessing. When running the old entry point, this defect allows training samples to influence validation loss and the selection of the best checkpoint. The repository alone does not establish whether the paper's training runs used exactly that entry point, nor does it establish that historical models were trained under the corrected protocol.
 
-本次保留论文数字和已有权重资源；未重新训练或重算论文结果。若要验证旧权重的选择过程，应核对对应训练代码、训练日志和实际 train/val 索引。
+The paper's reported values and existing checkpoint resources were retained. Models were not retrained, and paper results were not recomputed during this maintenance. To verify how an existing checkpoint was selected, inspect the corresponding training code, training logs, and actual train/val indices.
 
-其他修复：
+Additional fixes:
 
-- 恢复误以 LFS 指针保存的 Swin-UNet 文本源码；大数据和权重继续由 LFS 管理。
-- 按函数支持的参数传递几何增强/图像混合配置，修复默认合成入口的 `TypeError`。
-- 配置路径相对于 YAML 所在目录解析；固定合成随机种子和文件遍历顺序。
-- 几何变换中的标签使用最近邻插值，羽化仅用于图像混合，输出离散掩码。
-- 合成文件名包含背景组，防止导出时跨组覆盖；缺失掩码/未知类别报错。
-- Swin-UNet 支持导出的 PNG split 目录，保留旧 NPZ 输入，不重新划分已划分数据。
-- 统一类别参数，保留 `--n_class` 别名；YOLO 入口使用分割模型、可配置路径和设备。
-- 评估要求完整预测配对，保持实际文件名与指标对应，尺寸对齐显式启用。
-- 旧 Swin-UNet 辅助 Dice 计算不再把空 GT 上的错误前景预测计为 1；主评估使用 `compute.py` 的 IoU/Dice/Precision/Recall。
+- Restored Swin-UNet text source files that had incorrectly been stored as LFS pointers. Large datasets and checkpoints remain managed with LFS.
+- Routed geometric augmentation and image blending settings only to functions that support them, fixing the `TypeError` in the default synthesis entry point.
+- Resolved configuration paths relative to the YAML directory and fixed the synthesis random seed and file traversal order.
+- Used nearest-neighbor interpolation for labels during geometric transforms. Feathering affects image blending only, and output masks retain discrete labels.
+- Included the background group in synthesized filenames to prevent cross-group overwrites during export. Missing masks and unknown categories raise errors.
+- Added support for exported PNG split directories in Swin-UNet while retaining legacy NPZ inputs. Existing data splits are not split again.
+- Unified the class-count argument while retaining the `--n_class` alias. The YOLO entry point uses segmentation models and configurable paths and devices.
+- Required complete prediction pairing during evaluation, preserved the correspondence between actual filenames and metrics, and made dimension alignment opt-in.
+- Corrected the legacy Swin-UNet auxiliary Dice calculation so that a foreground prediction on empty ground truth no longer receives a score of 1. The primary evaluation uses IoU, Dice, Precision, and Recall from `compute.py`.
 
-## 资源管理
+## Resource Management
 
-保留 `data.zip`、`unet/*.pth`、`unet/pretrained_ckpt/*.pth` 和 `yolo/best_*` 的既有 LFS 入口。文本源码以普通 Git 文件保存。`__pycache__`、字节码、训练日志、生成数据、预测、实验输出、编辑器设置和临时文件由 `.gitignore` 排除。
+Existing LFS resources are retained at `data.zip`, `unet/*.pth`, `unet/pretrained_ckpt/*.pth`, and `yolo/best_*`. Text source files are stored as regular Git files. `.gitignore` excludes `__pycache__`, bytecode, training logs, generated datasets, predictions, experiment outputs, editor settings, and temporary files.
 
-移出仓库的上游非运行材料包括 YOLO 的文档站点、示例、测试、Docker/CI 配置，以及 SAM 的网页 demo 和 notebooks。相关源码在 Git 历史中保留；本地副本归档在论文目录的 `archive/upstream_reference/`。模型实现、打包文件、原始说明和许可证保留。
+Upstream material removed from the working repository includes YOLO's documentation site, examples, tests, and Docker/CI configuration, as well as SAM's web demo and notebooks. These files remain in Git history, and local copies are archived under `archive/upstream_reference/` in the paper project directory. Model implementations, packaging files, original documentation, and licenses are retained.
 
-## 最小验证
+## Minimal Validation
 
 ```bash
 python -m pip install -r synthesis_pipeline/requirements.txt
@@ -41,6 +41,6 @@ python -m pip install torch tensorboardX pytest
 python -m pytest tests/test_workflow.py -q
 ```
 
-回归检查覆盖：跨工作目录的合成→划分→双格式导出、同种子复现、二值掩码、缺失预测拒绝、手算指标、无效划分、独立训练/验证样本、确定性验证、PNG 加载与错误前景预测。检查使用小型人工构造图像，不计作论文实验。
+The regression checks cover synthesis, splitting, and export to both formats from a different working directory; reproducibility with the same seed; binary masks; rejection of missing predictions; hand-calculated metrics; invalid splits; independent training and validation samples; deterministic validation; PNG loading; and erroneous foreground predictions. They use small, artificially constructed images and are not paper experiments.
 
-本机验证：13 项回归检查通过，包含一个小型卷积网络的 CPU 单轮训练（20 个 singleton batch、独立验证与 checkpoint 写入）。该检查验证训练入口和修复路径，不是 Swin-UNet 骨干网络训练或论文指标复算。
+Validation from the preceding code update: 13 regression checks passed, including one CPU training epoch with a small convolutional network, 20 singleton batches, independent validation, and checkpoint writing. This check validates the training entry point and repaired execution paths. It does not train the Swin-UNet backbone or recompute the paper's metrics.
