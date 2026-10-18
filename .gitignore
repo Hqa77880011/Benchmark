@@ -53,3 +53,6 @@ sam/segment-anything/notebooks/
 
 # Local copies of extensionless published YOLO checkpoints
 /yolo/best_*.pt
+
+# Downloaded SAM checkpoints
+/checkpoints/

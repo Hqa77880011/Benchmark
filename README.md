@@ -75,8 +75,8 @@ Install a matching PyTorch/torchvision pair for your platform and device before 
 Download and extract the published image-mask archive:
 
 ```bash
-git lfs pull --include="data.zip"
-python -m zipfile -e data.zip data
+python prepare_inputs.py --plan
+python prepare_inputs.py --source data --output output/benchmark --seed 42
 ```
 
 The verified archive contains **3,600 pairs**, arranged as follows:
@@ -89,13 +89,22 @@ data/
 
 Images are RGB, masks are grayscale, and paired files have identical names. Both have a resolution of 360 × 360 pixels. The archive contains final benchmark pairs, not the seed defects/backgrounds required for synthesis.
 
-Convert these grouped pairs into training-ready splits and export both model formats:
+The command acquires LFS data when absent, checks paired archive members, safely extracts PNGs, and exports both model formats. If the archive was already extracted, prepare it directly:
 
 ```bash
 python prepare_dataset.py --source data --output output/benchmark --seed 42
 ```
 
-This creates a new class-stratified **70/10/20 train/val/test utility split** and saves its sample indices in `output/benchmark/splits.json`. It does not reconstruct the manuscript's 2,518/1,082 split. Use an empty output directory for a fresh preparation run.
+The current split groups filenames after removing `_aug_N` within each category.
+All 50 augmented variants of one original stay in the same role. Seed 42 and
+target ratios 70/10/20 produce **2,350 train / 400 validation / 850 test images**
+from **47 / 8 / 17 original groups** in the released archive. Minimum group
+counts take priority over exact ratios. Block has only two originals: one train
+and one test, with no Block validation examples. All eight categories remain in
+train and test. `splits.json` records original-group IDs, per-category counts and
+every image path. Use empty source/output directories for `prepare_inputs.py`,
+or an empty output with already-extracted data for `prepare_dataset.py`.
+`--offline` on the acquisition script requires a local complete archive.
 
 ```text
 output/benchmark/
@@ -225,13 +234,20 @@ The dataset retains the CC BY 4.0 declaration in the original README, and projec
 
 ## Fixed replacement evaluation setting
 
-Use the saved seed-42 70/10/20 utility split for every model, retraining supervised models on that split. Binary Swin uses 2 classes; original-size predictions from every method feed the same category-macro foreground evaluator. The default SAM setting now evaluates **every image** in the utility test cohort, with image-only local-contrast prompts and fixed confidence/area selection. It needs an existing SAM checkpoint, without labels or manual prompts at prediction time.
+Use the saved seed-42 source-grouped utility split for every model, retraining supervised models on that split. Binary Swin uses 2 classes; original-size predictions from every method feed the same category-macro foreground evaluator. The default SAM setting now evaluates **every image** in the utility test cohort, with image-only local-contrast prompts and fixed confidence/area selection. The checkpoint acquisition entry below supplies the official matching weights; prediction uses image-only prompts.
 
 ```bash
 python -m pip install -e sam/segment-anything scipy Pillow
+python sam/download_checkpoint.py --model-type vit_b --output checkpoints/sam_vit_b.pth
 python sam/predict_masks.py --images output/benchmark/swin_unet/test/img --output output/sam --checkpoint checkpoints/sam_vit_b.pth --model-type vit_b
 python compute.py --gt-dir output/benchmark/swin_unet/test/mask --pred-dir output/sam --output-dir output/sam_metrics --suffix= --average category
 ```
+
+`sam/download_checkpoint.py --plan` prints the official URL and expected bytes.
+The downloader supports the three [official SAM model releases](https://github.com/facebookresearch/segment-anything#model-checkpoints),
+uses a `.part` file until transfer completion, and checks the release size.
+ViT-B is the selected default (375,042,383 bytes); no SA-1B dataset is required.
+Downloaded checkpoints stay under ignored `checkpoints/`.
 
 The registered defaults are median window 15, absolute local-contrast threshold at least 12/255 and the image's 99.5th percentile, at most 32 connected-component peak prompts, SAM score >=0.8, proposal area <=15%, and cumulative foreground <=35%. Ties prefer smaller masks then candidate order. Images with no accepted foreground still receive a zero mask. These settings define a contrast-prompted SAM baseline and replace the unspecified historical proposal rule. `protocol.json` records the entire cohort, settings and accepted prompts. Select alternatives on validation only and freeze them before test; do not tune from test masks. Actual scores must be computed from new outputs, separately from the historical table above.
 
