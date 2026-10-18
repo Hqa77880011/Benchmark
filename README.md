@@ -86,6 +86,6 @@ Missing predictions raise an error; image-size alignment is opt-in. Scores are g
 - `output/{yolo_predictions,swin_predictions,sam}/`: binary prediction PNGs; SAM additionally writes `protocol.json`.
 - Evaluation folders: per-image/category metrics and aggregate summaries written by `compute.py`.
 
-Inspection environment: Python 3.13.5, NumPy 2.1.3, SciPy 1.15.3, PyTorch 2.7.1+cu118 and torchvision 0.22.1 (installed versions inspected). This update checked relevant Python syntax, YAML/configuration and CLI definitions. Training, full evaluation and CI were not run.
+Inspection environment: Python 3.13.5, NumPy 2.1.3, SciPy 1.15.3, PyTorch 2.7.1+cu118 and torchvision 0.22.1 (installed versions inspected). This update checked relevant Python syntax, YAML/configuration and CLI definitions. GitHub Actions checks the pipeline/model entry-point syntax and parses YAML/JSON configurations without running model code. Training and full evaluation were not run.
 
 Bundled model packages retain their upstream licenses and citations: [Ultralytics](yolo/LICENSE), [Swin-Unet](unet/UPSTREAM.md), and [SAM](sam/segment-anything/LICENSE).
