@@ -1,3 +1,5 @@
+> Bundled upstream reference: for the current LithoDefectV1 annotation workflow and its additional dependencies, follow [SAM-Tool/README.md](../SAM-Tool/README.md). Helpers are included locally; upstream notebook and web demo files are not bundled here.
+
 ## Latest updates -- SAM 2: Segment Anything in Images and Videos
 
 Please check out our new release on [**Segment Anything Model 2 (SAM 2)**](https://github.com/facebookresearch/segment-anything-2).

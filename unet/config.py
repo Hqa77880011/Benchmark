@@ -6,6 +6,7 @@
 # --------------------------------------------------------'
 
 import os
+from pathlib import Path
 import yaml
 from yacs.config import CfgNode as CN
 
@@ -174,7 +175,7 @@ _C.LOCAL_RANK = 0
 
 def _update_config_from_file(config, cfg_file):
     config.defrost()
-    with open(cfg_file, 'r') as f:
+    with open(cfg_file, 'r', encoding='utf-8') as f:
         yaml_cfg = yaml.load(f, Loader=yaml.FullLoader)
 
     for cfg in yaml_cfg.setdefault('BASE', ['']):
@@ -217,6 +218,11 @@ def update_config(config, args):
         config.EVAL_MODE = True
     if args.throughput:
         config.THROUGHPUT_MODE = True
+
+    checkpoint = config.MODEL.PRETRAIN_CKPT
+    if checkpoint and not Path(checkpoint).is_absolute():
+        config.MODEL.PRETRAIN_CKPT = str(
+            (Path(args.cfg).resolve().parent / checkpoint).resolve())
 
     config.freeze()
 

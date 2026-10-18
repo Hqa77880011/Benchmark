@@ -61,7 +61,7 @@ class Model(torch.nn.Module):
         val: Validate the model on a dataset.
         benchmark: Benchmark the model on various export formats.
         export: Export the model to different formats.
-        train_yolo12: Train the model on a dataset.
+        train: Train the model on a dataset.
         tune: Perform hyperparameter tuning.
         _apply: Apply a function to the model's tensors.
         add_callback: Add a callback function for an event.
@@ -72,7 +72,7 @@ class Model(torch.nn.Module):
         >>> from ultralytics import YOLO
         >>> model = YOLO("yolo11n.pt")
         >>> results = model.predict("image.jpg")
-        >>> model.train_yolo12(data="coco8.yaml", epochs=3)
+        >>> model.train(data="coco8.yaml", epochs=3)
         >>> metrics = model.val()
         >>> model.export(format="onnx")
     """
@@ -327,7 +327,7 @@ class Model(torch.nn.Module):
         if not (pt_module or pt_str):
             raise TypeError(
                 f"model='{self.model}' should be a *.pt PyTorch model to run this method, but is a different format. "
-                f"PyTorch models can train_yolo12, val, predict and export, i.e. 'model.train_yolo12(data=...)', but exported "
+                f"PyTorch models can train, val, predict and export, i.e. 'model.train(data=...)', but exported "
                 f"formats like ONNX, TensorRT etc. only support 'predict' and 'val' modes, "
                 f"i.e. 'yolo predict model=yolo11n.onnx'.\nTo run CUDA or MPS inference please pass the device "
                 f"argument directly in your inference command, i.e. 'model.predict(source=..., device=0)'"
@@ -767,7 +767,7 @@ class Model(torch.nn.Module):
 
         Examples:
             >>> model = YOLO("yolo11n.pt")
-            >>> results = model.train_yolo12(data="coco8.yaml", epochs=3)
+            >>> results = model.train(data="coco8.yaml", epochs=3)
         """
         self._check_is_pytorch_model()
         if hasattr(self.session, "model") and self.session.model.id:  # Ultralytics HUB session with loaded model
@@ -784,7 +784,7 @@ class Model(torch.nn.Module):
             "model": self.overrides["model"],
             "task": self.task,
         }  # method defaults
-        args = {**overrides, **custom, **kwargs, "mode": "train_yolo12"}  # highest priority args on the right
+        args = {**overrides, **custom, **kwargs, "mode": "train"}  # highest priority args on the right
         if args.get("resume"):
             args["resume"] = self.ckpt_path
 
@@ -848,7 +848,7 @@ class Model(torch.nn.Module):
             from .tuner import Tuner
 
             custom = {}  # method defaults
-            args = {**self.overrides, **custom, **kwargs, "mode": "train_yolo12"}  # highest priority args on the right
+            args = {**self.overrides, **custom, **kwargs, "mode": "train"}  # highest priority args on the right
             return Tuner(args=args, _callbacks=self.callbacks)(model=self, iterations=iterations)
 
     def _apply(self, fn) -> "Model":
@@ -977,7 +977,7 @@ class Model(torch.nn.Module):
             ...     print("Training is starting!")
             >>> model = YOLO("yolo11n.pt")
             >>> model.add_callback("on_train_start", on_train_start)
-            >>> model.train_yolo12(data="coco8.yaml", epochs=1)
+            >>> model.train(data="coco8.yaml", epochs=1)
         """
         self.callbacks[event].append(func)
 

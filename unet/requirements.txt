@@ -13,3 +13,4 @@ timm
 einops
 yacs
 Pillow
+PyYAML

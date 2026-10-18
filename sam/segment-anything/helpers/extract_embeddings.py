@@ -5,7 +5,7 @@
 # Please see the original notebook for more details and other examples and additional usage.
 import os
 import argparse
-import cv2
+from PIL import Image
 from tqdm import tqdm
 import numpy as np
 from segment_anything import sam_model_registry, SamPredictor
@@ -15,10 +15,12 @@ def main(checkpoint_path, model_type, device, images_folder, embeddings_folder):
     sam.to(device=device)
     predictor = SamPredictor(sam)
 
-    for image_name in tqdm(os.listdir(images_folder)):
+    for image_name in tqdm(sorted(os.listdir(images_folder))):
+        if not image_name.lower().endswith((".png", ".jpg")):
+            continue
         image_path = os.path.join(images_folder, image_name)
-        image = cv2.imread(image_path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        with Image.open(image_path) as source:
+            image = np.array(source.convert("RGB"))
 
 
         predictor.set_image(image)

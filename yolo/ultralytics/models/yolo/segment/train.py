@@ -24,7 +24,7 @@ class SegmentationTrainer(yolo.detect.DetectionTrainer):
         >>> from ultralytics.models.yolo.segment import SegmentationTrainer
         >>> args = dict(model="yolo11n-seg.pt", data="coco8-seg.yaml", epochs=3)
         >>> trainer = SegmentationTrainer(overrides=args)
-        >>> trainer.train_yolo12()
+        >>> trainer.train()
     """
 
     def __init__(self, cfg=DEFAULT_CFG, overrides: Optional[Dict] = None, _callbacks=None):
@@ -43,7 +43,7 @@ class SegmentationTrainer(yolo.detect.DetectionTrainer):
             >>> from ultralytics.models.yolo.segment import SegmentationTrainer
             >>> args = dict(model="yolo11n-seg.pt", data="coco8-seg.yaml", epochs=3)
             >>> trainer = SegmentationTrainer(overrides=args)
-            >>> trainer.train_yolo12()
+            >>> trainer.train()
         """
         if overrides is None:
             overrides = {}

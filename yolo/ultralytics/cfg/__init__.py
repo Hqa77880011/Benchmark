@@ -47,7 +47,7 @@ SOLUTION_MAP = {
 }
 
 # Define valid tasks and modes
-MODES = frozenset({"train_yolo12", "val", "predict", "export", "track", "benchmark"})
+MODES = frozenset({"train", "val", "predict", "export", "track", "benchmark"})
 TASKS = frozenset({"detect", "segment", "classify", "pose", "obb"})
 TASK2DATA = {
     "detect": "coco8.yaml",
@@ -113,7 +113,7 @@ CLI_HELP_MSG = f"""
                     See all ARGS at https://docs.ultralytics.com/usage/cfg or with 'yolo cfg'
 
     1. Train a detection model for 10 epochs with an initial learning_rate of 0.01
-        yolo train_yolo12 data=coco8.yaml model=yolo11n.pt epochs=10 lr0=0.01
+        yolo train data=coco8.yaml model=yolo11n.pt epochs=10 lr0=0.01
 
     2. Predict a YouTube video using a pretrained segmentation model at image size 320:
         yolo predict model=yolo11n-seg.pt source='https://youtu.be/LNwODJXcvt4' imgsz=320
@@ -397,10 +397,10 @@ def get_save_dir(args: SimpleNamespace, name: str = None) -> Path:
 
     Examples:
         >>> from types import SimpleNamespace
-        >>> args = SimpleNamespace(project="my_project", task="detect", mode="train_yolo12", exist_ok=True)
+        >>> args = SimpleNamespace(project="my_project", task="detect", mode="train", exist_ok=True)
         >>> save_dir = get_save_dir(args)
         >>> print(save_dir)
-        my_project/detect/train_yolo12
+        my_project/detect/train
     """
     if getattr(args, "save_dir", None):
         save_dir = args.save_dir
@@ -831,7 +831,7 @@ def entrypoint(debug: str = "") -> None:
 
     Examples:
         Train a detection model for 10 epochs with an initial learning_rate of 0.01:
-        >>> entrypoint("train_yolo12 data=coco8.yaml model=yolo11n.pt epochs=10 lr0=0.01")
+        >>> entrypoint("train data=coco8.yaml model=yolo11n.pt epochs=10 lr0=0.01")
 
         Predict a YouTube video using a pretrained segmentation model at image size 320:
         >>> entrypoint("predict model=yolo11n-seg.pt source='https://youtu.be/LNwODJXcvt4' imgsz=320")
@@ -970,7 +970,7 @@ def entrypoint(debug: str = "") -> None:
             "https://ultralytics.com/images/boats.jpg" if task == "obb" else DEFAULT_CFG.source or ASSETS
         )
         LOGGER.warning(f"'source' argument is missing. Using default 'source={overrides['source']}'.")
-    elif mode in {"train_yolo12", "val"}:
+    elif mode in {"train", "val"}:
         if "data" not in overrides and "resume" not in overrides:
             overrides["data"] = DEFAULT_CFG.data or TASK2DATA.get(task or DEFAULT_CFG.task, DEFAULT_CFG.data)
             LOGGER.warning(f"'data' argument is missing. Using default 'data={overrides['data']}'.")

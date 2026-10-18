@@ -269,8 +269,8 @@ def convert_coco(
         fn = Path(save_dir) / "labels" / lname  # folder name
         fn.mkdir(parents=True, exist_ok=True)
         if lvis:
-            # NOTE: create folders for both train_yolo12 and val in advance,
-            # since LVIS val set contains images from COCO 2017 train_yolo12 in addition to the COCO 2017 val split.
+            # NOTE: create folders for both train and val in advance,
+            # since LVIS val set contains images from COCO 2017 train in addition to the COCO 2017 val split.
             (fn / "train2017").mkdir(parents=True, exist_ok=True)
             (fn / "val2017").mkdir(parents=True, exist_ok=True)
         with open(json_file, encoding="utf-8") as f:
@@ -426,7 +426,7 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
     """
     Convert DOTA dataset annotations to YOLO OBB (Oriented Bounding Box) format.
 
-    The function processes images in the 'train_yolo12' and 'val' folders of the DOTA dataset. For each image, it reads the
+    The function processes images in the 'train' and 'val' folders of the DOTA dataset. For each image, it reads the
     associated label from the original labels directory and writes new labels in YOLO OBB format to a new directory.
 
     Args:
@@ -441,7 +441,7 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
 
             - DOTA
                 ├─ images
-                │   ├─ train_yolo12
+                │   ├─ train
                 │   └─ val
                 └─ labels
                     ├─ train_original
@@ -451,7 +451,7 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
 
             - DOTA
                 └─ labels
-                    ├─ train_yolo12
+                    ├─ train
                     └─ val
     """
     dota_root_path = Path(dota_root_path)
@@ -498,7 +498,7 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
                 formatted_coords = [f"{coord:.6g}" for coord in normalized_coords]
                 g.write(f"{class_idx} {' '.join(formatted_coords)}\n")
 
-    for phase in ["train_yolo12", "val"]:
+    for phase in ["train", "val"]:
         image_dir = dota_root_path / "images" / phase
         orig_label_dir = dota_root_path / "labels" / f"{phase}_original"
         save_dir = dota_root_path / "labels" / phase

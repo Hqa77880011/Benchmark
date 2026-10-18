@@ -44,11 +44,11 @@ class WorldTrainer(DetectionTrainer):
         preprocess_batch: Preprocess a batch of images and text for YOLOWorld training.
 
     Examples:
-        Initialize and train_yolo12 a YOLO World model
+        Initialize and train a YOLO World model
         >>> from ultralytics.models.yolo.world import WorldTrainer
         >>> args = dict(model="yolov8s-world.pt", data="coco8.yaml", epochs=3)
         >>> trainer = WorldTrainer(overrides=args)
-        >>> trainer.train_yolo12()
+        >>> trainer.train()
     """
 
     def __init__(self, cfg=DEFAULT_CFG, overrides: Optional[Dict[str, Any]] = None, _callbacks=None):
@@ -91,13 +91,13 @@ class WorldTrainer(DetectionTrainer):
 
         return model
 
-    def build_dataset(self, img_path: str, mode: str = "train_yolo12", batch: Optional[int] = None):
+    def build_dataset(self, img_path: str, mode: str = "train", batch: Optional[int] = None):
         """
         Build YOLO Dataset for training or validation.
 
         Args:
             img_path (str): Path to the folder containing images.
-            mode (str): `train_yolo12` mode or `val` mode, users are able to customize different augmentations for each mode.
+            mode (str): `train` mode or `val` mode, users are able to customize different augmentations for each mode.
             batch (int, optional): Size of batches, this is for `rect`.
 
         Returns:
@@ -105,9 +105,9 @@ class WorldTrainer(DetectionTrainer):
         """
         gs = max(int(de_parallel(self.model).stride.max() if self.model else 0), 32)
         dataset = build_yolo_dataset(
-            self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs, multi_modal=mode == "train_yolo12"
+            self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs, multi_modal=mode == "train"
         )
-        if mode == "train_yolo12":
+        if mode == "train":
             self.set_text_embeddings([dataset], batch)  # cache text embeddings to accelerate training
         return dataset
 

@@ -61,7 +61,6 @@ def main(checkpoint, model_type, onnx_model_path, orig_im_size, opset_version, q
         quantize_dynamic(
             model_input=temp_model_path,
             model_output=onnx_model_path,
-            optimize_model=True,
             per_channel=False,
             reduce_range=False,
             weight_type=QuantType.QUInt8,

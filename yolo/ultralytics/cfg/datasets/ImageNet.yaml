@@ -3,7 +3,7 @@
 # ImageNet-1k dataset https://www.image-net.org/index.php by Stanford University
 # Simplified class names from https://github.com/anishathalye/imagenet-simple-labels
 # Documentation: https://docs.ultralytics.com/datasets/classify/imagenet/
-# Example usage: yolo train_yolo12 task=classify data=imagenet
+# Example usage: yolo train task=classify data=imagenet
 # parent
 # ├── ultralytics
 # └── datasets
@@ -11,7 +11,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/imagenet # dataset root dir
-train: train_yolo12 # train_yolo12 images (relative to 'path') 1281167 images
+train: train # train images (relative to 'path') 1281167 images
 val: val # val images (relative to 'path') 50000 images
 test: # test images (optional)
 
@@ -483,7 +483,7 @@ names:
   463: bucket
   464: buckle
   465: bulletproof vest
-  466: high-speed train_yolo12
+  466: high-speed train
   467: butcher shop
   468: taxicab
   469: cauldron

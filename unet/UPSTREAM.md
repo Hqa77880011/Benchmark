@@ -1,3 +1,5 @@
+> Historical upstream reference: for the current LithoDefectV1 installation and data layout, follow [README.md](README.md). The medical-dataset commands below are original project notes, not the benchmark quickstart.
+
 # Swin-Unet
 [ECCVW2022] The codes for the work "Swin-Unet: Unet-like Pure Transformer for Medical Image Segmentation"(https://arxiv.org/abs/2105.05537). Our paper has been accepted by ECCV 2022 MEDICAL COMPUTER VISION WORKSHOP (https://mcv-workshop.github.io/). We updated the Reproducibility. I hope this will help you to reproduce the results.
 

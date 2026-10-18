@@ -1,77 +1,52 @@
 # SAM-Labelimg
 
-Fast annotation with the Segment Anything Model (SAM).
+Interactive annotation with the bundled Segment Anything Model (SAM) and SAM-Tool. This is an annotation workflow, not the manuscript's fixed zero-shot evaluation protocol.
 
-## 1. Obtain the Projects
+## 1. Install the Bundled Projects
 
-Project 1: [SAM-Tool](https://github.com/zhouayi/SAM-Tool)
-
-Project 2: [Segment Anything](https://github.com/facebookresearch/segment-anything)
+Start from the repository root in the activated virtual environment described in the [main README](../../README.md). The SAM implementation and helper scripts are already included; no additional clone or helper-folder copy is required.
 
 ```bash
-git clone https://github.com/zhouayi/SAM-Tool.git
-
-git clone https://github.com/facebookresearch/segment-anything.git
-cd segment-anything
-pip install -e .
+python -X utf8 -m pip install -r sam/SAM-Tool/requirements.txt
+python -X utf8 -m pip install -e ./sam/segment-anything
 ```
 
-Download the [SAM checkpoint](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth).
+The requirements include PyQt5 for the GUI, pycocotools for COCO masks, ONNX for export, and ONNX Runtime for inference. The annotation GUI needs a desktop display. The optional COCO viewer uses Tk, which must be available in the Python installation (for example, `python3-tk` on Ubuntu).
 
-## 2. Prepare the Dataset
+Download the [SAM ViT-H checkpoint](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth) and save it as `data/sam_vit_h_4b8939.pth`. The default model type is `default` (ViT-H); a different checkpoint requires its matching `--model_type`, such as `vit_b`.
 
-Place images under `<dataset_path>/images/*` and create an empty directory at `<dataset_path>/embeddings`.
+## 2. Prepare the Annotation Dataset
 
-## 3. Prepare Image Embeddings and the ONNX Model
+Create `data/sam_annotation/images/`, place the PNG/JPG images to annotate there, and keep a separate `data/sam_annotation/embeddings/` folder for generated embeddings:
 
-Copy the `helpers` folder from Project 1 into the root directory of Project 2.
+```text
+data/sam_annotation/
+├── images/*.png
+└── embeddings/
+```
 
-### 3.1 Extract Image Embeddings
+The embedding script creates the embeddings folder if it does not already exist. This flat annotation layout is separate from the benchmark archive's category-grouped `img/` and `mask/` folders.
 
-Run `extract_embeddings.py` to extract image embeddings:
+## 3. Generate Embeddings and Export ONNX
+
+Run all commands from the repository root:
 
 ```bash
-# Run from the root directory of Project 2.
-python helpers\extract_embeddings.py --checkpoint-path sam_vit_h_4b8939.pth --dataset-folder <dataset_path> --device cpu
+python sam/segment-anything/helpers/extract_embeddings.py --checkpoint-path data/sam_vit_h_4b8939.pth --dataset-folder data/sam_annotation --device cpu
+python sam/segment-anything/helpers/generate_onnx.py --checkpoint-path data/sam_vit_h_4b8939.pth --onnx-model-path data/sam_onnx.onnx --orig-im-size 360 360
 ```
 
-- `checkpoint-path`: path to the downloaded SAM checkpoint.
-- `dataset-folder`: path to the dataset.
-- `device`: defaults to `cuda`. Use `cpu` if a GPU is unavailable; processing will be slower.
+`--device cpu` works without a GPU; use `--device cuda` for embedding extraction on a compatible GPU. Embeddings are saved as NPY files with the image filename stem under `data/sam_annotation/embeddings/`.
 
-The corresponding NPY files will be written to `<dataset_path>/embeddings`.
-
-### 3.2 Export the Checkpoint to ONNX
-
-Run `generate_onnx.py` to convert the PTH checkpoint to an ONNX model:
-
-```bash
-# Run from the root directory of Project 2.
-python helpers\generate_onnx.py --checkpoint-path sam_vit_h_4b8939.pth --onnx-model-path ./sam_onnx.onnx --orig-im-size 1080 1920
-```
-
-- `checkpoint-path`: path to the same SAM checkpoint.
-- `onnx-model-path`: destination path for the exported ONNX model.
-- `orig-im-size`: original image dimensions in `(height, width)` order.
-
-**The provided conversion code does not support dynamic original image dimensions.** If the dataset contains different image sizes, export separate ONNX models with the appropriate `orig-im-size` values.
+`--orig-im-size` takes `(height, width)` and must match the images to annotate. The example uses 360 × 360 images. The bundled exporter traces the original-size resizing operation at export time, so prepare a separate model/dataset workflow for each image size. The model type used for export must match the one used for embedding extraction.
 
 ## 4. Annotate Images
 
-Copy the generated `sam_onnx.onnx` file into the root directory of Project 1, then run `segment_anything_annotator.py`:
-
 ```bash
-# Run from the root directory of Project 1.
-python segment_anything_annotator.py --onnx-model-path sam_onnx.onnx --dataset-path <dataset_path> --categories cat,dog
+python sam/SAM-Tool/segment_anything_annotator.py --onnx-model-path data/sam_onnx.onnx --dataset-path data/sam_annotation --categories defect
 ```
 
-- `onnx-model-path`: path to the exported ONNX model.
-- `dataset-path`: path to the dataset.
-- `categories`: comma-separated category names without spaces.
-
-Left-click on an object to add a positive mask prompt; right-click to add a negative prompt.
-
-Keyboard shortcuts:
+`--categories` accepts comma-separated names without spaces. Left-click adds a positive prompt and right-click adds a negative prompt.
 
 | Key | Action |
 | --- | --- |
@@ -87,13 +62,15 @@ Keyboard shortcuts:
 
 ![Interactive annotation example](assets/catdog.gif)
 
-Annotations are saved in COCO format at `<dataset_path>/annotations.json`.
+COCO annotations are saved to `data/sam_annotation/annotations.json`.
 
 ## 5. Inspect Annotations
 
 ```bash
-python cocoviewer.py -i <dataset_path> -a <dataset_path>\annotations.json
+python sam/SAM-Tool/cocoviewer.py -i data/sam_annotation -a data/sam_annotation/annotations.json
 ```
+
+The generated COCO `file_name` values include the `images/` prefix, so `-i` points to the dataset root, not its `images/` subfolder.
 
 ![Annotation viewer example](assets/catdog.png)
 

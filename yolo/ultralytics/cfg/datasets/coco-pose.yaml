@@ -2,7 +2,7 @@
 
 # COCO 2017 Keypoints dataset https://cocodataset.org by Microsoft
 # Documentation: https://docs.ultralytics.com/datasets/pose/coco/
-# Example usage: yolo train_yolo12 data=coco-pose.yaml
+# Example usage: yolo train data=coco-pose.yaml
 # parent
 # ├── ultralytics
 # └── datasets
@@ -10,7 +10,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/coco-pose # dataset root dir
-train: train2017.txt # train_yolo12 images (relative to 'path') 56599 images
+train: train2017.txt # train images (relative to 'path') 56599 images
 val: val2017.txt # val images (relative to 'path') 2346 images
 test: test-dev2017.txt # 20288 of 40670 images, submit to https://codalab.lisn.upsaclay.fr/competitions/7403
 

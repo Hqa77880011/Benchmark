@@ -89,13 +89,13 @@ class YOLOETrainer(DetectionTrainer):
             self.test_loader, save_dir=self.save_dir, args=copy(self.args), _callbacks=self.callbacks
         )
 
-    def build_dataset(self, img_path: str, mode: str = "train_yolo12", batch: Optional[int] = None):
+    def build_dataset(self, img_path: str, mode: str = "train", batch: Optional[int] = None):
         """
         Build YOLO Dataset.
 
         Args:
             img_path (str): Path to the folder containing images.
-            mode (str): 'train_yolo12' mode or 'val' mode, users are able to customize different augmentations for each mode.
+            mode (str): 'train' mode or 'val' mode, users are able to customize different augmentations for each mode.
             batch (int, optional): Size of batches, this is for rectangular training.
 
         Returns:
@@ -103,7 +103,7 @@ class YOLOETrainer(DetectionTrainer):
         """
         gs = max(int(de_parallel(self.model).stride.max() if self.model else 0), 32)
         return build_yolo_dataset(
-            self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs, multi_modal=mode == "train_yolo12"
+            self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs, multi_modal=mode == "train"
         )
 
 
@@ -174,7 +174,7 @@ class YOLOETrainerFromScratch(YOLOETrainer, WorldTrainerFromScratch):
         generate_text_embeddings: Generate and cache text embeddings for training.
     """
 
-    def build_dataset(self, img_path: Union[List[str], str], mode: str = "train_yolo12", batch: Optional[int] = None):
+    def build_dataset(self, img_path: Union[List[str], str], mode: str = "train", batch: Optional[int] = None):
         """
         Build YOLO Dataset for training or validation.
 
@@ -183,7 +183,7 @@ class YOLOETrainerFromScratch(YOLOETrainer, WorldTrainerFromScratch):
 
         Args:
             img_path (List[str] | str): Path to the folder containing images or list of paths.
-            mode (str): 'train_yolo12' mode or 'val' mode, allowing customized augmentations for each mode.
+            mode (str): 'train' mode or 'val' mode, allowing customized augmentations for each mode.
             batch (int, optional): Size of batches, used for rectangular training/validation.
 
         Returns:
@@ -285,13 +285,13 @@ class YOLOEVPTrainer(YOLOETrainerFromScratch):
         preprocess_batch: Preprocess batches with visual prompts.
     """
 
-    def build_dataset(self, img_path: Union[List[str], str], mode: str = "train_yolo12", batch: Optional[int] = None):
+    def build_dataset(self, img_path: Union[List[str], str], mode: str = "train", batch: Optional[int] = None):
         """
         Build YOLO Dataset for training or validation with visual prompts.
 
         Args:
             img_path (List[str] | str): Path to the folder containing images or list of paths.
-            mode (str): 'train_yolo12' mode or 'val' mode, allowing customized augmentations for each mode.
+            mode (str): 'train' mode or 'val' mode, allowing customized augmentations for each mode.
             batch (int, optional): Size of batches, used for rectangular training/validation.
 
         Returns:

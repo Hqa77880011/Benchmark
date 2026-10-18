@@ -40,7 +40,7 @@ def _log_images(path: Path, prefix: str = "") -> None:
 
     Examples:
         >>> from pathlib import Path
-        >>> _log_images(Path("runs/train_yolo12/exp/val_batch0_pred.jpg"), prefix="validation")
+        >>> _log_images(Path("runs/train/exp/val_batch0_pred.jpg"), prefix="validation")
     """
     if live:
         name = path.name
@@ -107,7 +107,7 @@ def on_pretrain_routine_start(trainer) -> None:
 
 def on_pretrain_routine_end(trainer) -> None:
     """Log plots related to the training process at the end of the pretraining routine."""
-    _log_plots(trainer.plots, "train_yolo12")
+    _log_plots(trainer.plots, "train")
 
 
 def on_train_start(trainer) -> None:
@@ -139,7 +139,7 @@ def on_fit_epoch_end(trainer) -> None:
     """
     global _training_epoch
     if live and _training_epoch:
-        all_metrics = {**trainer.label_loss_items(trainer.tloss, prefix="train_yolo12"), **trainer.metrics, **trainer.lr}
+        all_metrics = {**trainer.label_loss_items(trainer.tloss, prefix="train"), **trainer.metrics, **trainer.lr}
         for metric, value in all_metrics.items():
             live.log_metric(metric, value)
 
@@ -149,7 +149,7 @@ def on_fit_epoch_end(trainer) -> None:
             for metric, value in model_info_for_loggers(trainer).items():
                 live.log_metric(metric, value, plot=False)
 
-        _log_plots(trainer.plots, "train_yolo12")
+        _log_plots(trainer.plots, "train")
         _log_plots(trainer.validator.plots, "val")
 
         live.next_step()
@@ -174,7 +174,7 @@ def on_train_end(trainer) -> None:
     """
     if live:
         # At the end log the best metrics. It runs validator on the best model internally.
-        all_metrics = {**trainer.label_loss_items(trainer.tloss, prefix="train_yolo12"), **trainer.metrics, **trainer.lr}
+        all_metrics = {**trainer.label_loss_items(trainer.tloss, prefix="train"), **trainer.metrics, **trainer.lr}
         for metric, value in all_metrics.items():
             live.log_metric(metric, value, plot=False)
 

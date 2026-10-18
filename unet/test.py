@@ -33,7 +33,9 @@ parser.add_argument('--batch_size', type=int, default=24,
                     help='batch_size per gpu')
 parser.add_argument('--img_size', type=int, default=224, help='input patch size of network input')
 parser.add_argument('--is_savenii', default=True,action="store_true", help='whether to save results during inference')
-parser.add_argument('--test_save_dir', type=str, default='./predictions', help='saving prediction as nii!')
+parser.add_argument('--test_save_dir', type=str, default=None, help='Directory for class-index PNG predictions')
+parser.add_argument('--checkpoint', type=str, help='Explicit trained checkpoint; defaults to <output_dir>/best_model.pth')
+parser.add_argument('--num_workers', type=int, default=0)
 parser.add_argument('--deterministic', type=int, default=1, help='whether use deterministic training')
 parser.add_argument('--base_lr', type=float, default=0.01, help='segmentation network learning rate')
 parser.add_argument('--seed', type=int, default=1234, help='random seed')
@@ -73,7 +75,7 @@ def inference(args, model, test_save_path=None):
     from datasets.dataset_synapse import Synapse_dataset
     from utils import test_single_volume
     db_test = Synapse_dataset(base_dir=args.volume_path, split=args.split_name, list_dir=args.list_dir)
-    testloader = DataLoader(db_test, batch_size=1, shuffle=False, num_workers=1)
+    testloader = DataLoader(db_test, batch_size=1, shuffle=False, num_workers=args.num_workers)
     logging.info("{} test iterations per epoch".format(len(testloader)))
     model.eval()
     metric_list = 0.0
@@ -119,14 +121,14 @@ if __name__ == "__main__":
 
     net = ViT_seg(config, img_size=args.img_size, num_classes=args.num_classes).to(args.device)
 
-    snapshot = os.path.join(args.output_dir, 'best_model.pth')
-    if not os.path.exists(snapshot):
+    snapshot = args.checkpoint or os.path.join(args.output_dir, 'best_model.pth')
+    if not args.checkpoint and not os.path.exists(snapshot):
         snapshot = snapshot.replace('best_model', 'epoch_' + str(args.max_epochs - 1))
     msg = net.load_state_dict(torch.load(snapshot, map_location=args.device))
     print("self trained swin unet", msg)
-    snapshot_name = snapshot.split('/')[-1]
+    snapshot_name = Path(snapshot).name
 
-    log_folder = './test_log/test_log_'
+    log_folder = os.path.join(args.output_dir, 'test_log')
     os.makedirs(log_folder, exist_ok=True)
     logging.basicConfig(filename=log_folder + '/' + snapshot_name + ".txt", level=logging.INFO,
                         format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
@@ -135,7 +137,7 @@ if __name__ == "__main__":
     logging.info(snapshot_name)
 
     if args.is_savenii:
-        args.test_save_dir = os.path.join(args.output_dir, "predictions")
+        args.test_save_dir = args.test_save_dir or os.path.join(args.output_dir, "predictions")
         test_save_path = args.test_save_dir
         os.makedirs(test_save_path, exist_ok=True)
     else:

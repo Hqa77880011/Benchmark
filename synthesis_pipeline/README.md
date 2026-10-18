@@ -2,13 +2,22 @@
 
 This folder implements seed loading, synchronized geometric augmentation, alpha composition, stratified splitting and YOLO / Swin-UNet export. The paper's revision status and reported benchmark results are maintained in the [repository README](../README.md).
 
+## Which Data Preparation Path to Use
+
+The released `data.zip` contains final `img/<category>` and `mask/<category>` pairs. To train from that archive, use `python prepare_dataset.py --source data --output output/benchmark` from the repository root after extraction; see the [main README](../README.md). It does not supply the seeds/backgrounds required below.
+
 ## Run
 
 From the repository root:
 
 ```bash
-python -m pip install -r synthesis_pipeline/requirements.txt
+python -X utf8 -m pip install -r synthesis_pipeline/requirements.txt
 python synthesis_pipeline/run_pipeline.py --config synthesis_pipeline/config.yaml
+```
+
+The following are alternatives for running individual steps, in order. Do not repeat them against the nonempty outputs of the full-pipeline command above:
+
+```bash
 python synthesis_pipeline/run_pipeline.py --step synthesis
 python synthesis_pipeline/run_pipeline.py --step split
 python synthesis_pipeline/run_pipeline.py --step yolo
@@ -39,8 +48,10 @@ Geometric masks use nearest interpolation. Feathering creates the image blending
 output/
 ├── synthetic_defects/{private,public}/{img,mask}/<category>/*.png
 ├── synthetic_defects_split/{train,val,test/private,test/public}/{img,mask}/<category>/*.png
-├── synthetic_yolo/{images,labels}/{train,val,test_private,test_public}/
-│   └── data.yaml          # stored at synthetic_yolo/data.yaml
+├── synthetic_yolo/
+│   ├── data.yaml
+│   ├── images/{train,val,test_private,test_public}/
+│   └── labels/{train,val,test_private,test_public}/
 └── swin_unet_data/{train,val,test_private,test_public}/{img,mask}/*.png
 ```
 
@@ -59,3 +70,16 @@ step_split(config)
 ```
 
 The optional `lithodefect.dataset.LithoDefectDataset` reads either grouped binary inputs or exported flat PNG pairs. Use `split_ratios=None` for existing split folders. Optional tools in `tools/` have their own input configuration and are not called by the default pipeline.
+
+## Use the Generated Outputs
+
+From the repository root, set the YOLO `--data` argument to `synthesis_pipeline/output/synthetic_yolo/data.yaml`. Set Swin-UNet `--root_path` to `synthesis_pipeline/output/swin_unet_data` and `--split_name` to `test_private` or `test_public`.
+
+For example, after training a binary Swin-UNet model on those outputs:
+
+```bash
+python unet/test.py --root_path synthesis_pipeline/output/swin_unet_data --checkpoint output/swin_model/best_model.pth --output_dir output/swin_model --test_save_dir output/synthetic_predictions --num_classes 2 --split_name test_public --device cpu
+python compute.py --gt-dir synthesis_pipeline/output/swin_unet_data/test_public/mask --pred-dir output/synthetic_predictions --output-dir output/synthetic_metrics --suffix= --average category
+```
+
+These paths refer to freshly synthesized utility data and do not recreate the manuscript's Open-test, Re-synth-test, or Fab-test indices.

@@ -2,7 +2,7 @@
 
 # Hand Keypoints dataset by Ultralytics
 # Documentation: https://docs.ultralytics.com/datasets/pose/hand-keypoints/
-# Example usage: yolo train_yolo12 data=hand-keypoints.yaml
+# Example usage: yolo train data=hand-keypoints.yaml
 # parent
 # ├── ultralytics
 # └── datasets
@@ -10,7 +10,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/hand-keypoints # dataset root dir
-train: train_yolo12 # train_yolo12 images (relative to 'path') 18776 images
+train: train # train images (relative to 'path') 18776 images
 val: val # val images (relative to 'path') 7992 images
 
 # Keypoints

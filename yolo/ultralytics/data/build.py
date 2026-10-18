@@ -111,46 +111,46 @@ def seed_worker(worker_id: int):  # noqa
     random.seed(worker_seed)
 
 
-def build_yolo_dataset(cfg, img_path, batch, data, mode="train_yolo12", rect=False, stride=32, multi_modal=False):
+def build_yolo_dataset(cfg, img_path, batch, data, mode="train", rect=False, stride=32, multi_modal=False):
     """Build and return a YOLO dataset based on configuration parameters."""
     dataset = YOLOMultiModalDataset if multi_modal else YOLODataset
     return dataset(
         img_path=img_path,
         imgsz=cfg.imgsz,
         batch_size=batch,
-        augment=mode == "train_yolo12",  # augmentation
+        augment=mode == "train",  # augmentation
         hyp=cfg,  # TODO: probably add a get_hyps_from_cfg function
         rect=cfg.rect or rect,  # rectangular batches
         cache=cfg.cache or None,
         single_cls=cfg.single_cls or False,
         stride=int(stride),
-        pad=0.0 if mode == "train_yolo12" else 0.5,
+        pad=0.0 if mode == "train" else 0.5,
         prefix=colorstr(f"{mode}: "),
         task=cfg.task,
         classes=cfg.classes,
         data=data,
-        fraction=cfg.fraction if mode == "train_yolo12" else 1.0,
+        fraction=cfg.fraction if mode == "train" else 1.0,
     )
 
 
-def build_grounding(cfg, img_path, json_file, batch, mode="train_yolo12", rect=False, stride=32):
+def build_grounding(cfg, img_path, json_file, batch, mode="train", rect=False, stride=32):
     """Build and return a GroundingDataset based on configuration parameters."""
     return GroundingDataset(
         img_path=img_path,
         json_file=json_file,
         imgsz=cfg.imgsz,
         batch_size=batch,
-        augment=mode == "train_yolo12",  # augmentation
+        augment=mode == "train",  # augmentation
         hyp=cfg,  # TODO: probably add a get_hyps_from_cfg function
         rect=cfg.rect or rect,  # rectangular batches
         cache=cfg.cache or None,
         single_cls=cfg.single_cls or False,
         stride=int(stride),
-        pad=0.0 if mode == "train_yolo12" else 0.5,
+        pad=0.0 if mode == "train" else 0.5,
         prefix=colorstr(f"{mode}: "),
         task=cfg.task,
         classes=cfg.classes,
-        fraction=cfg.fraction if mode == "train_yolo12" else 1.0,
+        fraction=cfg.fraction if mode == "train" else 1.0,
     )
 
 

@@ -2,7 +2,7 @@
 
 # Signature dataset by Ultralytics
 # Documentation: https://docs.ultralytics.com/datasets/detect/signature/
-# Example usage: yolo train_yolo12 data=signature.yaml
+# Example usage: yolo train data=signature.yaml
 # parent
 # ├── ultralytics
 # └── datasets
@@ -10,7 +10,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/signature # dataset root dir
-train: train_yolo12/images # train_yolo12 images (relative to 'path') 143 images
+train: train/images # train images (relative to 'path') 143 images
 val: valid/images # val images (relative to 'path') 35 images
 
 # Classes

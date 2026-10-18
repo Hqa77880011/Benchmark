@@ -7,6 +7,7 @@ import numpy as np
 from simplification.cutil import simplify_coords_vwp
 import os, cv2, copy
 from distinctipy import distinctipy
+from salt.utils import read_image
 
 
 def init_coco(dataset_folder, image_names, categories, coco_json_path):
@@ -28,7 +29,7 @@ def init_coco(dataset_folder, image_names, categories, coco_json_path):
             {"id": i, "name": category, "supercategory": category}
         )
     for i, image_name in enumerate(image_names):
-        im = cv2.imread(os.path.join(dataset_folder, image_name))
+        im = read_image(os.path.join(dataset_folder, image_name))
         coco_json["images"].append(
             {
                 "id": i,
@@ -149,7 +150,7 @@ class DatasetExplorer:
             "embeddings",
             os.path.splitext(os.path.split(image_name)[1])[0] + ".npy",
         )
-        image = cv2.imread(image_path)
+        image = read_image(image_path)
         image_bgr = copy.deepcopy(image)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_embedding = np.load(embedding_path)

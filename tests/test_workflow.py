@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import pytest
 import yaml
+from PIL import Image
 from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,11 +35,13 @@ def make_seeds(root):
     ]:
         dest = root / folder / name
         dest.parent.mkdir(parents=True, exist_ok=True)
-        assert cv2.imwrite(str(dest), array)
+        Image.fromarray(array).save(dest)
 
 
 def test_pipeline_from_another_working_directory(tmp_path):
     """The shipped config must run all steps independently of the shell cwd."""
+    tmp_path = tmp_path / "unicode_data_数据"
+    tmp_path.mkdir()
     make_seeds(tmp_path / "data")
     config = yaml.safe_load((ROOT / "synthesis_pipeline/config.yaml").read_text(encoding="utf-8"))
     config["category_mapping"] = {"arching": ["ArchDeform"]}
@@ -63,7 +66,7 @@ def test_pipeline_from_another_working_directory(tmp_path):
     yolo_config = yaml.safe_load((output / "synthetic_yolo/data.yaml").read_text(encoding="utf-8"))
     assert Path(yolo_config["path"]).is_absolute()
     for path in (output / "swin_unet_data").glob("*/mask/*.png"):
-        assert set(np.unique(cv2.imread(str(path), 0))) <= {0, 1}
+        assert set(np.unique(np.asarray(Image.open(path)))) <= {0, 1}
 
 
 def test_synthesis_reproducible_and_binary(tmp_path):

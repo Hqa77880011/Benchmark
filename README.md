@@ -30,6 +30,7 @@ Benchmark/
 ├── README.md
 ├── docs/REPRODUCIBILITY.md       # Paper protocol, code behavior, resources, and validation
 ├── data.zip                      # Dataset resource managed with Git LFS
+├── prepare_dataset.py            # Released archive → training-ready splits and exports
 ├── compute.py                    # Binary mask evaluation with complete prediction pairing
 ├── tests/test_workflow.py         # Regression checks for the fixes in this update
 ├── synthesis_pipeline/
@@ -38,6 +39,7 @@ Benchmark/
 │   └── lithodefect/
 ├── yolo/                         # Bundled Ultralytics implementation and its license
 │   ├── trains.py                 # Parameterized instance segmentation training entry point
+│   ├── predict_masks.py          # One binary prediction PNG per input image
 │   └── ultralytics/
 ├── unet/                         # Swin-UNet, PNG/NPZ loaders, training, and inference
 │   └── UPSTREAM.md               # Original Swin-Unet documentation and citation
@@ -46,69 +48,141 @@ Benchmark/
 
 Upstream demo websites, examples, documentation builds, test infrastructure, caches, and old logs are excluded from the benchmark's runtime dependencies. Model implementations, configurations, licenses, and existing checkpoint resources are retained.
 
-## Obtaining Data and Checkpoints
+## Installation
 
-Clone the repository with Git. GitHub source ZIP downloads may contain only LFS pointers for large files.
+Clone the repository without automatically downloading every LFS object, then enable LFS locally:
 
 ```bash
-git clone https://github.com/Hqa77880011/Benchmark.git
+git -c 'filter.lfs.process=git-lfs filter-process --skip' clone https://github.com/Hqa77880011/Benchmark.git
 cd Benchmark
-git lfs install
+git lfs install --local
+python -m venv .venv
+```
+
+Activate the environment with `source .venv/bin/activate` on Linux/macOS, or `.\.venv\Scripts\Activate.ps1` in Windows PowerShell. All commands below start from the repository root; no directory changes are required.
+
+```bash
+python -X utf8 -m pip install --upgrade pip
+python -X utf8 -m pip install torch torchvision
+python -X utf8 -m pip install -r synthesis_pipeline/requirements.txt
+python -X utf8 -m pip install -r unet/requirements.txt -e ./yolo
+```
+
+Install a matching PyTorch/torchvision pair for your platform and device before installing the remaining dependencies. The CPU workflow checks used Python 3.13.5, PyTorch 2.7.1, and torchvision 0.22.1. The UTF-8 option also supports Windows checkouts containing non-ASCII paths. Synthesis and mask evaluation run on CPU; use `--device cpu` for CPU model runs. CUDA training requires compatible CUDA-enabled PyTorch and torchvision builds.
+
+## Prepare the Released Dataset
+
+Download and extract the published image-mask archive:
+
+```bash
 git lfs pull --include="data.zip"
 python -m zipfile -e data.zip data
 ```
 
-Download existing model resources as needed instead of fetching all checkpoints at once:
+The verified archive contains **3,600 pairs**, arranged as follows:
 
-```bash
-git lfs pull --include="unet/*.pth,unet/pretrained_ckpt/*.pth,yolo/best_*"
+```text
+data/
+├── img/<category>/<Category>_...png
+└── mask/<category>/<Category>_...png
 ```
 
-The dataset archive and models remain available through their existing LFS objects. Not all large files were downloaded or verified during this update. Running the synthesis pipeline requires separately prepared seed defect images, corresponding masks, and backgrounds; the released image dataset should not be assumed to contain the complete seed material. See the [synthesis pipeline documentation](synthesis_pipeline/README.md) for the required input structure.
+Images are RGB, masks are grayscale, and paired files have identical names. Both have a resolution of 360 × 360 pixels. The archive contains final benchmark pairs, not the seed defects/backgrounds required for synthesis.
 
-## Synthesis and Training
-
-Run the following commands from the repository root. Synthesis can run on a CPU; model training requires PyTorch and the relevant model dependencies to be installed separately.
+Convert these grouped pairs into training-ready splits and export both model formats:
 
 ```bash
-python -m pip install -r synthesis_pipeline/requirements.txt
+python prepare_dataset.py --source data --output output/benchmark --seed 42
+```
+
+This creates a new class-stratified **70/10/20 train/val/test utility split** and saves its sample indices in `output/benchmark/splits.json`. It does not reconstruct the manuscript's 2,518/1,082 split. Use an empty output directory for a fresh preparation run.
+
+```text
+output/benchmark/
+├── splits/{train,val,test}/{img,mask}/<category>/*.png
+├── splits.json
+├── yolo/
+│   ├── data.yaml
+│   ├── images/{train,val,test}/*.png
+│   └── labels/{train,val,test}/*.txt
+└── swin_unet/{train,val,test}/{img,mask}/*.png
+```
+
+Swin-UNet masks use background=0 and defect=1 by default, with source values greater than 127 treated as defect. YOLO polygon export uses Otsu thresholding, a minimum contour area of 50 pixels, and polygon approximation factor 0.002. For a separate background-plus-eight-category experiment, prepare with `--multiclass` and train with `--num_classes 9`.
+
+## Train and Evaluate YOLO
+
+Use the bundled Ultralytics implementation installed above:
+
+```bash
+python yolo/trains.py --data output/benchmark/yolo/data.yaml --model yolo11n-seg.pt --device 0 --imgsz 384 --epochs 50 --batch 64 --project runs/segment --name lithodefect
+```
+
+`--model` must identify a segmentation checkpoint or architecture. The example may download the official pretrained checkpoint. To initialize from scratch, use `--model yolo11n-seg.yaml`. For a small CPU run, reduce the batch size and epoch count and pass `--device cpu --workers 0`. If an output directory already exists, Ultralytics increments its run name; use the checkpoint path printed by the training command.
+
+Export a binary mask for every test image and evaluate against the prepared binary ground truth:
+
+```bash
+python yolo/predict_masks.py --model runs/segment/lithodefect/weights/best.pt --source output/benchmark/yolo/images/test --output output/yolo_predictions --device cpu --imgsz 384 --conf 0.25
+python compute.py --gt-dir output/benchmark/swin_unet/test/mask --pred-dir output/yolo_predictions --output-dir output/yolo_metrics --suffix= --average category
+```
+
+The exporter merges predicted instances, restores the original image resolution, and writes an all-zero mask when no defect is detected. Use an empty prediction directory so a previous run cannot contribute stale files. Native YOLO validation reports detection/instance metrics; `compute.py` reports foreground mask metrics, so those outputs are distinct.
+
+## Train and Evaluate Swin-UNet
+
+Fetch the pretrained Swin-T encoder before training:
+
+```bash
+git lfs pull --include="unet/pretrained_ckpt/*.pth"
+python unet/train.py --root_path output/benchmark/swin_unet --dataset LithoDefect --output_dir output/swin_model --num_classes 2 --img_size 224 --batch_size 32 --max_epochs 50
+```
+
+The checkpoint path in the Swin-UNet YAML is resolved relative to that YAML file. PNG input reads the existing train/val directories without re-splitting; validation uses deterministic preprocessing. For a CPU run, add `--device cpu --num_workers 0` and reduce the batch size. Legacy NPZ inputs still accept `--dataset datasets --list_dir <list_folder>`.
+
+```bash
+python unet/test.py --root_path output/benchmark/swin_unet --dataset LithoDefect --checkpoint output/swin_model/best_model.pth --output_dir output/swin_model --test_save_dir output/swin_predictions --num_classes 2 --split_name test --device cpu
+python compute.py --gt-dir output/benchmark/swin_unet/test/mask --pred-dir output/swin_predictions --output-dir output/swin_metrics --suffix= --average category
+```
+
+`--test_save_dir` controls the class-index PNG output directory. The test script's auxiliary Dice/HD95 log uses a different empty-mask convention from `compute.py`; use the latter for the four foreground mask metrics shown in this repository.
+
+## Existing Checkpoints
+
+Download existing trained checkpoints only when needed:
+
+```bash
+git lfs pull --include="unet/best_model.pth,yolo/best_*"
+```
+
+The published `unet/best_model.pth` has **4 output channels**, so loading it requires `--num_classes 4`, not the 2-channel setting used for new binary training above. The original four-channel label mapping is not supplied. The existing YOLO files have no filename extension; copy a selected file to a `.pt` filename before passing it to Ultralytics:
+
+```bash
+python -c "from shutil import copyfile; copyfile('yolo/best_11', 'yolo/best_11.pt')"
+```
+
+The original sample-level split indices are unavailable. Evaluating historical checkpoints on a newly randomized utility split does not reproduce the paper's held-out protocol.
+
+## Synthesize New Data
+
+Synthesis is a separate workflow for users who have prepared seed defects, masks, and backgrounds as described in the [pipeline documentation](synthesis_pipeline/README.md):
+
+```bash
 python synthesis_pipeline/run_pipeline.py --list-steps
 python synthesis_pipeline/run_pipeline.py --config synthesis_pipeline/config.yaml
 ```
 
-Configuration paths are resolved relative to the **directory containing the YAML file**. Default inputs are located in `synthesis_pipeline/data/`, and outputs are written to `synthesis_pipeline/output/`. The same configuration and random seed reproduce the generation process. Use empty output directories for a fresh run to avoid mixing new samples with previous outputs.
+Configuration paths are relative to the YAML directory. Default inputs are in `synthesis_pipeline/data/` and outputs in `synthesis_pipeline/output/`. These paths are separate from the extracted `data/` archive and `output/benchmark/` above. Use empty output directories for a fresh run.
 
-The default splitting utility stratifies by category and background source to create train, val, test/private, and test/public splits in a 70/10/10/10 ratio. **This is a configurable utility split, not a reconstruction of the paper's original 7:3 split indices.** Both background sources contribute to training and validation. `test_private` contains synthetic images and must not be treated as Fab-test; `test_public` must not be directly equated with the paper's Open-test. The paper's sample-level split lists and complete experimental environment have not been supplied as part of this maintenance update.
+The synthesis utility defaults to 70/10/10/10 train, val, private-background synthetic test, and public-background synthetic test splits. Both background sources contribute to train/val. `test_private` is not the real Fab-test set, and `test_public` is not the paper's Open-test. Independently generated Re-synth-test data require a different seed and separate output paths; Fab-test requires independently acquired and annotated real SEM images.
 
-Install and train YOLO using the Ultralytics version bundled in this repository:
+## Evaluation Conventions and SAM
 
-```bash
-python -m pip install -e ./yolo
-python yolo/trains.py --data synthesis_pipeline/output/synthetic_yolo/data.yaml --model yolo11n-seg.pt --device 0 --imgsz 384 --epochs 50 --batch 64
-```
+`compute.py` expects prediction names `<GT filename stem><suffix>.png`. The examples use `--suffix=` because the exporters preserve the GT stem. Missing predictions, empty input folders, corrupt images, and size mismatches raise errors. Explicitly pass `--resize` only when nearest-neighbor alignment is intended.
 
-`--model` requires a segmentation model or segmentation architecture. Supply the corresponding checkpoint to use another YOLO version. The bundled version is recorded in `yolo/ultralytics/__init__.py`; these commands do not rely on automatically installing the latest release.
+The report records actual filenames, sample count, per-image metrics, and aggregate metrics. `--average image` is the default image macro-average. `--average category` first averages within each `<Category>_` filename group, then gives categories equal weight. Pixel values greater than 0 are foreground; zero-denominator metrics, including two empty masks, are assigned 0.
 
-Swin-UNet export uses binary defect labels by default: background is 0 and defect is 1, matching a model with 2 output channels. For the optional eight-category semantic segmentation setting, set `swinunet.binary: false` and use `--num_classes 9`. This constitutes a different experimental setting.
-
-```bash
-python -m pip install -r unet/requirements.txt
-cd unet
-python train.py --root_path ../synthesis_pipeline/output/swin_unet_data --dataset LithoDefect --output_dir ./model_out --num_classes 2 --img_size 224 --batch_size 32 --max_epochs 50
-python test.py --root_path ../synthesis_pipeline/output/swin_unet_data --dataset LithoDefect --output_dir ./model_out --num_classes 2 --split_name test_public
-```
-
-Fetch the pretrained Swin-T checkpoint through LFS before training. PNG data are read from the existing train/val directories, and validation uses no random augmentation. Legacy NPZ inputs continue to support an explicit `--list_dir`. See the [SAM tool documentation](sam/SAM-Tool/README.md) for installation, annotation, and prompting instructions.
-
-## Mask Evaluation
-
-```bash
-python compute.py --gt-dir data/masks --pred-dir results/pred_masks --output-dir results --suffix _mask
-```
-
-Prediction filenames follow `<GT filename stem><suffix>.png`. Pass `--suffix ""` when predictions use the same filenames as the ground-truth masks. Missing predictions, empty datasets, corrupted files, or mismatched dimensions raise errors. When dimension alignment is required, explicitly enable `--resize`, which uses nearest-neighbor interpolation.
-
-The output file, `metrics_results.txt`, records the sample count, actual filenames, per-image metrics, and aggregate metrics. The default `--average image` computes a macro-average over images. If filenames begin with `<Category>_`, use `--average category` to average within each category first and then give each category equal weight. These aggregation rules are distinct and should not be mixed. Pixel values greater than 0 are treated as foreground; metrics with a zero denominator are assigned 0.
+SAM annotation and ONNX preparation are optional and have additional dependencies. Follow the [bundled SAM tool instructions](sam/SAM-Tool/README.md). Interactive annotation is not the paper's fixed zero-shot evaluation protocol.
 
 ## Results Reported in the Revised Manuscript
 

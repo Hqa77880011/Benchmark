@@ -1,6 +1,13 @@
 import numpy as np
 from copy import deepcopy
 from typing import Tuple
+from PIL import Image
+
+
+def read_image(path):
+    """Read a BGR image while preserving Unicode paths on Windows."""
+    with Image.open(path) as source:
+        return np.asarray(source.convert("RGB"))[:, :, ::-1].copy()
 
 def get_preprocess_shape(
     oldh: int, oldw: int, long_side_length: int

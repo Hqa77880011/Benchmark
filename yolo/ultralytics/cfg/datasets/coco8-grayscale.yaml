@@ -2,7 +2,7 @@
 
 # COCO8-Grayscale dataset (first 8 images from COCO train2017) by Ultralytics
 # Documentation: https://docs.ultralytics.com/datasets/detect/coco8-grayscale/
-# Example usage: yolo train_yolo12 data=coco8-grayscale.yaml
+# Example usage: yolo train data=coco8-grayscale.yaml
 # parent
 # ├── ultralytics
 # └── datasets
@@ -10,7 +10,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/coco8-grayscale # dataset root dir
-train: images/train_yolo12 # train_yolo12 images (relative to 'path') 4 images
+train: images/train # train images (relative to 'path') 4 images
 val: images/val # val images (relative to 'path') 4 images
 test: # test images (optional)
 
@@ -24,7 +24,7 @@ names:
   3: motorcycle
   4: airplane
   5: bus
-  6: train_yolo12
+  6: train
   7: truck
   8: boat
   9: traffic light

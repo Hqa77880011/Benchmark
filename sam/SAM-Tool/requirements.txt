@@ -10,3 +10,6 @@ pyyaml
 tqdm
 simplification
 distinctipy
+PyQt5>=5.15
+pycocotools
+onnx

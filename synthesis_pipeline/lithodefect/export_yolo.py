@@ -18,6 +18,7 @@ import numpy as np
 import shutil
 from pathlib import Path
 import yaml
+from .image_io import read_image
 from tqdm import tqdm
 
 
@@ -145,9 +146,7 @@ def export_to_yolo(src_root, out_root, class_mapping=None, splits=None,
         empty_count = 0
         for img_path, mask_path, class_id in tqdm(samples, desc=f"  {out_name}"):
             # Generate YOLO label
-            mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-            if mask is None:
-                raise OSError(f"Could not read mask: {mask_path}")
+            mask = read_image(mask_path, cv2.IMREAD_GRAYSCALE)
             out_img_path = os.path.join(out_img_dir, os.path.basename(img_path))
             if os.path.exists(out_img_path):
                 raise FileExistsError(f"Duplicate export filename: {out_img_path}")
@@ -170,7 +169,7 @@ def export_to_yolo(src_root, out_root, class_mapping=None, splits=None,
         grand_empty += empty_count
 
     # Generate data.yaml
-    _generate_yaml(out_root, class_mapping)
+    _generate_yaml(out_root, class_mapping, splits)
 
     print(f"\n{'=' * 50}")
     print(f"YOLO export complete!")
@@ -180,18 +179,22 @@ def export_to_yolo(src_root, out_root, class_mapping=None, splits=None,
     print(f"{'=' * 50}")
 
 
-def _generate_yaml(out_root, class_mapping):
+def _generate_yaml(out_root, class_mapping, splits):
     """Generate YOLO data.yaml configuration file."""
     names = [""] * len(class_mapping)
     for name, cid in class_mapping.items():
         names[cid] = name
 
+    split_names = {name for _, name in splits}
+    test_name = "test" if "test" in split_names else "test_private"
     yaml_content = {
         "path": Path(out_root).resolve().as_posix(),
         "train": "images/train", "val": "images/val",
-        "test": "images/test_private", "test_public": "images/test_public",
+        "test": f"images/{test_name}",
         "nc": len(names), "names": names,
     }
+    if "test_public" in split_names:
+        yaml_content["test_public"] = "images/test_public"
     yaml_path = os.path.join(out_root, "data.yaml")
     with open(yaml_path, "w", encoding="utf-8") as f:
         yaml.safe_dump(yaml_content, f, sort_keys=False)

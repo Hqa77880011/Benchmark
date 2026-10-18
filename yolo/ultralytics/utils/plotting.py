@@ -167,7 +167,7 @@ colors = Colors()  # create instance for 'from utils.plots import colors'
 
 class Annotator:
     """
-    Ultralytics Annotator for train_yolo12/val mosaics and JPGs and predictions annotations.
+    Ultralytics Annotator for train/val mosaics and JPGs and predictions annotations.
 
     Attributes:
         im (Image.Image | np.ndarray): The image to annotate.
@@ -903,7 +903,7 @@ def plot_results(
                 ax[i].plot(x, y, marker=".", label=f.stem, linewidth=2, markersize=8)  # actual results
                 ax[i].plot(x, gaussian_filter1d(y, sigma=3), ":", label="smooth", linewidth=2)  # smoothing line
                 ax[i].set_title(s[j], fontsize=12)
-                # if j in {8, 9, 10}:  # share train_yolo12 and val loss y axes
+                # if j in {8, 9, 10}:  # share train and val loss y axes
                 #     ax[i].get_shared_y_axes().join(ax[i], ax[i - 5])
         except Exception as e:
             LOGGER.error(f"Plotting error for {f}: {e}")

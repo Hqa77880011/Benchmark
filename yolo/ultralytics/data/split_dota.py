@@ -62,13 +62,13 @@ def bbox_iof(polygon1: np.ndarray, bbox2: np.ndarray, eps: float = 1e-6) -> np.n
     return outputs
 
 
-def load_yolo_dota(data_root: str, split: str = "train_yolo12") -> List[Dict[str, Any]]:
+def load_yolo_dota(data_root: str, split: str = "train") -> List[Dict[str, Any]]:
     """
     Load DOTA dataset annotations and image information.
 
     Args:
         data_root (str): Data root directory.
-        split (str, optional): The split data set, could be 'train_yolo12' or 'val'.
+        split (str, optional): The split data set, could be 'train' or 'val'.
 
     Returns:
         (List[Dict[str, Any]]): List of annotation dictionaries containing image information.
@@ -77,13 +77,13 @@ def load_yolo_dota(data_root: str, split: str = "train_yolo12") -> List[Dict[str
         The directory structure assumed for the DOTA dataset:
             - data_root
                 - images
-                    - train_yolo12
+                    - train
                     - val
                 - labels
-                    - train_yolo12
+                    - train
                     - val
     """
-    assert split in {"train_yolo12", "val"}, f"Split must be 'train_yolo12' or 'val', not {split}."
+    assert split in {"train", "val"}, f"Split must be 'train' or 'val', not {split}."
     im_dir = Path(data_root) / "images" / split
     assert im_dir.exists(), f"Can't find {im_dir}, please check your data root."
     im_files = glob(str(Path(data_root) / "images" / split / "*"))
@@ -188,10 +188,10 @@ def crop_and_save(
         The directory structure assumed for the DOTA dataset:
             - data_root
                 - images
-                    - train_yolo12
+                    - train
                     - val
                 - labels
-                    - train_yolo12
+                    - train
                     - val
     """
     im = cv2.imread(anno["filepath"])
@@ -220,7 +220,7 @@ def crop_and_save(
 def split_images_and_labels(
     data_root: str,
     save_dir: str,
-    split: str = "train_yolo12",
+    split: str = "train",
     crop_sizes: Tuple[int, ...] = (1024,),
     gaps: Tuple[int, ...] = (200,),
 ) -> None:
@@ -230,7 +230,7 @@ def split_images_and_labels(
     Args:
         data_root (str): Root directory of the dataset.
         save_dir (str): Directory to save the split dataset.
-        split (str, optional): The split data set, could be 'train_yolo12' or 'val'.
+        split (str, optional): The split data set, could be 'train' or 'val'.
         crop_sizes (Tuple[int, ...], optional): Tuple of crop sizes.
         gaps (Tuple[int, ...], optional): Tuple of gaps between crops.
 
@@ -264,7 +264,7 @@ def split_trainval(
     data_root: str, save_dir: str, crop_size: int = 1024, gap: int = 200, rates: Tuple[float, ...] = (1.0,)
 ) -> None:
     """
-    Split train_yolo12 and val sets of DOTA dataset with multiple scaling rates.
+    Split train and val sets of DOTA dataset with multiple scaling rates.
 
     Args:
         data_root (str): Root directory of the dataset.
@@ -277,25 +277,25 @@ def split_trainval(
         The directory structure assumed for the DOTA dataset:
             - data_root
                 - images
-                    - train_yolo12
+                    - train
                     - val
                 - labels
-                    - train_yolo12
+                    - train
                     - val
         and the output directory structure is:
             - save_dir
                 - images
-                    - train_yolo12
+                    - train
                     - val
                 - labels
-                    - train_yolo12
+                    - train
                     - val
     """
     crop_sizes, gaps = [], []
     for r in rates:
         crop_sizes.append(int(crop_size / r))
         gaps.append(int(gap / r))
-    for split in ["train_yolo12", "val"]:
+    for split in ["train", "val"]:
         split_images_and_labels(data_root, save_dir, split, crop_sizes, gaps)
 
 

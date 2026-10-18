@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 import shutil
 from tqdm import tqdm
+from .image_io import read_image, write_image
 
 
 # Default class mapping: background=0, defect classes start from 1
@@ -90,16 +91,13 @@ def export_to_swinunet(src_root, out_root, class_mapping=None, splits=None,
 
         for img_path, mask_path, cls_id in tqdm(samples, desc=f"  {out_name}"):
             # Convert mask: binary (0/255) → class-index (0=bg, N=class_id)
-            mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-            if mask is None:
-                raise OSError(f"Could not read mask: {mask_path}")
+            mask = read_image(mask_path, cv2.IMREAD_GRAYSCALE)
             basename = os.path.basename(img_path)
             image_out = os.path.join(out_img_dir, basename)
             if os.path.exists(image_out):
                 raise FileExistsError(f"Duplicate export filename: {image_out}")
             class_mask = np.where(mask > 127, 1 if binary else cls_id, 0).astype(np.uint8)
-            if not cv2.imwrite(os.path.join(out_mask_dir, basename), class_mask):
-                raise OSError(f"Could not write mask: {basename}")
+            write_image(os.path.join(out_mask_dir, basename), class_mask)
             shutil.copy2(img_path, image_out)
 
         print(f"    {out_name}: {len(samples)} images")

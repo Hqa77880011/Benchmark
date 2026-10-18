@@ -47,16 +47,16 @@ class DetectionTrainer(BaseTrainer):
         >>> from ultralytics.models.yolo.detect import DetectionTrainer
         >>> args = dict(model="yolo11n.pt", data="coco8.yaml", epochs=3)
         >>> trainer = DetectionTrainer(overrides=args)
-        >>> trainer.train_yolo12()
+        >>> trainer.train()
     """
 
-    def build_dataset(self, img_path: str, mode: str = "train_yolo12", batch: Optional[int] = None):
+    def build_dataset(self, img_path: str, mode: str = "train", batch: Optional[int] = None):
         """
         Build YOLO Dataset for training or validation.
 
         Args:
             img_path (str): Path to the folder containing images.
-            mode (str): 'train_yolo12' mode or 'val' mode, users are able to customize different augmentations for each mode.
+            mode (str): 'train' mode or 'val' mode, users are able to customize different augmentations for each mode.
             batch (int, optional): Size of batches, this is for 'rect' mode.
 
         Returns:
@@ -65,7 +65,7 @@ class DetectionTrainer(BaseTrainer):
         gs = max(int(de_parallel(self.model).stride.max() if self.model else 0), 32)
         return build_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs)
 
-    def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train_yolo12"):
+    def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
         """
         Construct and return dataloader for the specified mode.
 
@@ -73,19 +73,19 @@ class DetectionTrainer(BaseTrainer):
             dataset_path (str): Path to the dataset.
             batch_size (int): Number of images per batch.
             rank (int): Process rank for distributed training.
-            mode (str): 'train_yolo12' for training dataloader, 'val' for validation dataloader.
+            mode (str): 'train' for training dataloader, 'val' for validation dataloader.
 
         Returns:
             (DataLoader): PyTorch dataloader object.
         """
-        assert mode in {"train_yolo12", "val"}, f"Mode must be 'train_yolo12' or 'val', not {mode}."
+        assert mode in {"train", "val"}, f"Mode must be 'train' or 'val', not {mode}."
         with torch_distributed_zero_first(rank):  # init dataset *.cache only once if DDP
             dataset = self.build_dataset(dataset_path, mode, batch_size)
-        shuffle = mode == "train_yolo12"
+        shuffle = mode == "train"
         if getattr(dataset, "rect", False) and shuffle:
             LOGGER.warning("'rect=True' is incompatible with DataLoader shuffle, setting shuffle=False")
             shuffle = False
-        workers = self.args.workers if mode == "train_yolo12" else self.args.workers * 2
+        workers = self.args.workers if mode == "train" else self.args.workers * 2
         return build_dataloader(dataset, batch_size, workers, shuffle, rank)  # return dataloader
 
     def preprocess_batch(self, batch: Dict) -> Dict:
@@ -150,7 +150,7 @@ class DetectionTrainer(BaseTrainer):
             self.test_loader, save_dir=self.save_dir, args=copy(self.args), _callbacks=self.callbacks
         )
 
-    def label_loss_items(self, loss_items: Optional[List[float]] = None, prefix: str = "train_yolo12"):
+    def label_loss_items(self, loss_items: Optional[List[float]] = None, prefix: str = "train"):
         """
         Return a loss dict with labeled training loss items tensor.
 
@@ -213,6 +213,6 @@ class DetectionTrainer(BaseTrainer):
         Returns:
             (int): Optimal batch size.
         """
-        train_dataset = self.build_dataset(self.data["train_yolo12"], mode="train_yolo12", batch=16)
+        train_dataset = self.build_dataset(self.data["train"], mode="train", batch=16)
         max_num_obj = max(len(label["cls"]) for label in train_dataset.labels) * 4  # 4 for mosaic augmentation
         return super().auto_batch(max_num_obj)

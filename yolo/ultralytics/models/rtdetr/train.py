@@ -35,10 +35,10 @@ class RTDETRTrainer(DetectionTrainer):
         - AMP training can lead to NaN outputs and may produce errors during bipartite graph matching.
 
     Examples:
-        >>> from ultralytics.models.rtdetr.train_yolo12 import RTDETRTrainer
+        >>> from ultralytics.models.rtdetr.train import RTDETRTrainer
         >>> args = dict(model="rtdetr-l.yaml", data="coco8.yaml", imgsz=640, epochs=3)
         >>> trainer = RTDETRTrainer(overrides=args)
-        >>> trainer.train_yolo12()
+        >>> trainer.train()
     """
 
     def get_model(self, cfg: Optional[dict] = None, weights: Optional[str] = None, verbose: bool = True):
@@ -64,7 +64,7 @@ class RTDETRTrainer(DetectionTrainer):
 
         Args:
             img_path (str): Path to the folder containing images.
-            mode (str): Dataset mode, either 'train_yolo12' or 'val'.
+            mode (str): Dataset mode, either 'train' or 'val'.
             batch (int, optional): Batch size for rectangle training.
 
         Returns:
@@ -74,7 +74,7 @@ class RTDETRTrainer(DetectionTrainer):
             img_path=img_path,
             imgsz=self.args.imgsz,
             batch_size=batch,
-            augment=mode == "train_yolo12",
+            augment=mode == "train",
             hyp=self.args,
             rect=False,
             cache=self.args.cache or None,
@@ -82,7 +82,7 @@ class RTDETRTrainer(DetectionTrainer):
             prefix=colorstr(f"{mode}: "),
             classes=self.args.classes,
             data=self.data,
-            fraction=self.args.fraction if mode == "train_yolo12" else 1.0,
+            fraction=self.args.fraction if mode == "train" else 1.0,
         )
 
     def get_validator(self):

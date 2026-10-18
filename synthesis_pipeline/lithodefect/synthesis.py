@@ -23,6 +23,7 @@ from tqdm import tqdm
 
 from .transforms import apply_transforms
 from .composite import composite
+from .image_io import read_image, write_image
 
 
 class Synthesizer:
@@ -59,7 +60,7 @@ class Synthesizer:
             fpath = os.path.join(bg_dir, fname)
             for group_name, cfg in self.config["bg_groups"].items():
                 if any(fname.startswith(p) for p in cfg["prefixes"]):
-                    img = cv2.imread(fpath)
+                    img = read_image(fpath)
                     if img is not None:
                         groups[group_name].append((fpath, img))
                     break
@@ -105,10 +106,8 @@ class Synthesizer:
                 base = os.path.splitext(img_name)[0]
                 mask_path = os.path.join(mask_dir, f"{base}_mask.png")
 
-                defect_img = cv2.imread(img_path)
-                defect_mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-                if defect_img is None or defect_mask is None:
-                    raise OSError(f"Could not read seed image/mask: {img_path}, {mask_path}")
+                defect_img = read_image(img_path)
+                defect_mask = read_image(mask_path, cv2.IMREAD_GRAYSCALE)
 
                 for aug_idx in range(num_aug):
                     # Stage 2: Geometric augmentation (each iteration = fresh random params)
@@ -144,8 +143,7 @@ class Synthesizer:
                     for directory, array in [(out_img_dir, result_img),
                                              (out_mask_dir, result_mask)]:
                         path = os.path.join(directory, out_name)
-                        if not cv2.imwrite(path, array):
-                            raise OSError(f"Could not write image: {path}")
+                        write_image(path, array)
                     total += 1
 
         return total

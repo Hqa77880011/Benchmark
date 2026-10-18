@@ -411,11 +411,11 @@ def check_det_dataset(dataset: str, autodownload: bool = True) -> Dict:
     data = YAML.load(file, append_filename=True)  # dictionary
 
     # Checks
-    for k in "train_yolo12", "val":
+    for k in "train", "val":
         if k not in data:
             if k != "val" or "validation" not in data:
                 raise SyntaxError(
-                    emojis(f"{dataset} '{k}:' key missing ❌.\n'train_yolo12' and 'val' are required in all data YAMLs.")
+                    emojis(f"{dataset} '{k}:' key missing ❌.\n'train' and 'val' are required in all data YAMLs.")
                 )
             LOGGER.warning("renaming data YAML 'validation' key to 'val' to match YOLO format.")
             data["val"] = data.pop("validation")  # replace 'validation' key with 'val' key
@@ -438,7 +438,7 @@ def check_det_dataset(dataset: str, autodownload: bool = True) -> Dict:
 
     # Set paths
     data["path"] = path  # download scripts
-    for k in "train_yolo12", "val", "test", "minival":
+    for k in "train", "val", "test", "minival":
         if data.get(k):  # prepend path
             if isinstance(data[k], str):
                 x = (path / data[k]).resolve()
@@ -492,7 +492,7 @@ def check_cls_dataset(dataset: Union[str, Path], split: str = "") -> Dict:
     Returns:
         (Dict): A dictionary containing the following keys:
 
-            - 'train_yolo12' (Path): The directory path containing the training set of the dataset.
+            - 'train' (Path): The directory path containing the training set of the dataset.
             - 'val' (Path): The directory path containing the validation set of the dataset.
             - 'test' (Path): The directory path containing the test set of the dataset.
             - 'nc' (int): The number of classes in the dataset.
@@ -517,16 +517,16 @@ def check_cls_dataset(dataset: Union[str, Path], split: str = "") -> Dict:
             url = f"https://github.com/ultralytics/assets/releases/download/v0.0.0/{dataset}.zip"
             download(url, dir=data_dir.parent)
         LOGGER.info(f"Dataset download success ✅ ({time.time() - t:.1f}s), saved to {colorstr('bold', data_dir)}\n")
-    train_set = data_dir / "train_yolo12"
+    train_set = data_dir / "train"
     if not train_set.is_dir():
-        LOGGER.warning(f"Dataset 'split=train_yolo12' not found at {train_set}")
+        LOGGER.warning(f"Dataset 'split=train' not found at {train_set}")
         image_files = list(data_dir.rglob("*.jpg")) + list(data_dir.rglob("*.png"))
         if image_files:
             from ultralytics.data.split import split_classify_dataset
 
             LOGGER.info(f"Found {len(image_files)} images in subdirectories. Attempting to split...")
             data_dir = split_classify_dataset(data_dir, train_ratio=0.8)
-            train_set = data_dir / "train_yolo12"
+            train_set = data_dir / "train"
         else:
             LOGGER.error(f"No images found in {data_dir} or its subdirectories.")
     val_set = (
@@ -544,12 +544,12 @@ def check_cls_dataset(dataset: Union[str, Path], split: str = "") -> Dict:
         LOGGER.warning("Dataset 'split=test' not found, using 'split=val' instead.")
         test_set = val_set
 
-    nc = len([x for x in (data_dir / "train_yolo12").glob("*") if x.is_dir()])  # number of classes
-    names = [x.name for x in (data_dir / "train_yolo12").iterdir() if x.is_dir()]  # class names list
+    nc = len([x for x in (data_dir / "train").glob("*") if x.is_dir()])  # number of classes
+    names = [x.name for x in (data_dir / "train").iterdir() if x.is_dir()]  # class names list
     names = dict(enumerate(sorted(names)))
 
     # Print to console
-    for k, v in {"train_yolo12": train_set, "val": val_set, "test": test_set}.items():
+    for k, v in {"train": train_set, "val": val_set, "test": test_set}.items():
         prefix = f"{colorstr(f'{k}:')} {v}..."
         if v is None:
             LOGGER.info(prefix)
@@ -558,7 +558,7 @@ def check_cls_dataset(dataset: Union[str, Path], split: str = "") -> Dict:
             nf = len(files)  # number of files
             nd = len({file.parent for file in files})  # number of directories
             if nf == 0:
-                if k == "train_yolo12":
+                if k == "train":
                     raise FileNotFoundError(f"{dataset} '{k}:' no training images found")
                 else:
                     LOGGER.warning(f"{prefix} found {nf} images in {nd} classes (no images found)")
@@ -567,7 +567,7 @@ def check_cls_dataset(dataset: Union[str, Path], split: str = "") -> Dict:
             else:
                 LOGGER.info(f"{prefix} found {nf} images in {nd} classes ✅ ")
 
-    return {"train_yolo12": train_set, "val": val_set, "test": test_set, "nc": nc, "names": names, "channels": 3}
+    return {"train": train_set, "val": val_set, "test": test_set, "nc": nc, "names": names, "channels": 3}
 
 
 class HUBDatasetStats:
@@ -664,7 +664,7 @@ class HUBDatasetStats:
             zipped = zip(labels["cls"], coordinates)
             return [[int(c[0]), *(round(float(x), 4) for x in points)] for c, points in zipped]
 
-        for split in "train_yolo12", "val", "test":
+        for split in "train", "val", "test":
             self.stats[split] = None  # predefine
             path = self.data.get(split)
 
@@ -726,7 +726,7 @@ class HUBDatasetStats:
         from ultralytics.data import YOLODataset  # ClassificationDataset
 
         self.im_dir.mkdir(parents=True, exist_ok=True)  # makes dataset-hub/images/
-        for split in "train_yolo12", "val", "test":
+        for split in "train", "val", "test":
             if self.data.get(split) is None:
                 continue
             dataset = YOLODataset(img_path=self.data[split], data=self.data)

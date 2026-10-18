@@ -2,7 +2,7 @@
 
 # LVIS dataset http://www.lvisdataset.org by Facebook AI Research.
 # Documentation: https://docs.ultralytics.com/datasets/detect/lvis/
-# Example usage: yolo train_yolo12 data=lvis.yaml
+# Example usage: yolo train data=lvis.yaml
 # parent
 # ├── ultralytics
 # └── datasets
@@ -10,7 +10,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/lvis # dataset root dir
-train: train_yolo12.txt # train_yolo12 images (relative to 'path') 100170 images
+train: train.txt # train images (relative to 'path') 100170 images
 val: val.txt # val images (relative to 'path') 19809 images
 minival: minival.txt # minival images (relative to 'path') 5000 images
 
@@ -179,7 +179,7 @@ names:
   161: horned cow
   162: bulldog
   163: bulldozer/dozer
-  164: bullet train_yolo12
+  164: bullet train
   165: bulletin board/notice board
   166: bulletproof vest
   167: bullhorn/megaphone
@@ -222,7 +222,7 @@ names:
   204: cape
   205: cappuccino/coffee cappuccino
   206: car/car automobile/auto/auto automobile/automobile
-  207: railcar/railcar part of a train_yolo12/railway car/railway car part of a train_yolo12/railroad car/railroad car part of a train_yolo12
+  207: railcar/railcar part of a train/railway car/railway car part of a train/railroad car/railroad car part of a train
   208: elevator car
   209: car battery/automobile battery
   210: identity card
@@ -782,7 +782,7 @@ names:
   764: parka/anorak
   765: parking meter
   766: parrot
-  767: passenger car/passenger car part of a train_yolo12/coach/coach part of a train_yolo12
+  767: passenger car/passenger car part of a train/coach/coach part of a train
   768: passenger ship
   769: passport
   770: pastry
@@ -1129,7 +1129,7 @@ names:
   1111: traffic light
   1112: dirt bike
   1113: trailer truck/tractor trailer/trucking rig/articulated lorry/semi truck
-  1114: train_yolo12/train_yolo12 railroad vehicle/railroad train_yolo12
+  1114: train/train railroad vehicle/railroad train
   1115: trampoline
   1116: tray
   1117: trench coat

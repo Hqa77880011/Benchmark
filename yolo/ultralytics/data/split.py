@@ -11,9 +11,9 @@ from ultralytics.utils import DATASETS_DIR, LOGGER, TQDM
 
 def split_classify_dataset(source_dir: Union[str, Path], train_ratio: float = 0.8) -> Path:
     """
-    Split classification dataset into train_yolo12 and val directories in a new directory.
+    Split classification dataset into train and val directories in a new directory.
 
-    Creates a new directory '{source_dir}_split' with train_yolo12/val subdirectories, preserving the original class
+    Creates a new directory '{source_dir}_split' with train/val subdirectories, preserving the original class
     structure with an 80/20 split by default.
 
     Directory structure:
@@ -30,7 +30,7 @@ def split_classify_dataset(source_dir: Union[str, Path], train_ratio: float = 0.
 
         After:
             caltech_split/
-            ├── train_yolo12/
+            ├── train/
             │   ├── class1/
             │   │   ├── img1.jpg
             │   │   └── ...
@@ -48,7 +48,7 @@ def split_classify_dataset(source_dir: Union[str, Path], train_ratio: float = 0.
 
     Args:
         source_dir (str | Path): Path to classification dataset root directory.
-        train_ratio (float): Ratio for train_yolo12 split, between 0 and 1.
+        train_ratio (float): Ratio for train split, between 0 and 1.
 
     Returns:
         (Path): Path to the created split directory.
@@ -62,7 +62,7 @@ def split_classify_dataset(source_dir: Union[str, Path], train_ratio: float = 0.
     """
     source_path = Path(source_dir)
     split_path = Path(f"{source_path}_split")
-    train_path, val_path = split_path / "train_yolo12", split_path / "val"
+    train_path, val_path = split_path / "train", split_path / "val"
 
     # Create directory structure
     split_path.mkdir(exist_ok=True)
@@ -73,7 +73,7 @@ def split_classify_dataset(source_dir: Union[str, Path], train_ratio: float = 0.
     class_dirs = [d for d in source_path.iterdir() if d.is_dir()]
     total_images = sum(len(list(d.glob("*.*"))) for d in class_dirs)
     stats = f"{len(class_dirs)} classes, {total_images} images"
-    LOGGER.info(f"Splitting {source_path} ({stats}) into {train_ratio:.0%} train_yolo12, {1 - train_ratio:.0%} val...")
+    LOGGER.info(f"Splitting {source_path} ({stats}) into {train_ratio:.0%} train, {1 - train_ratio:.0%} val...")
 
     for class_dir in class_dirs:
         # Create class directories
@@ -101,7 +101,7 @@ def autosplit(
     annotated_only: bool = False,
 ) -> None:
     """
-    Automatically split a dataset into train_yolo12/val/test splits and save the resulting splits into autosplit_*.txt files.
+    Automatically split a dataset into train/val/test splits and save the resulting splits into autosplit_*.txt files.
 
     Args:
         path (Path): Path to images directory.

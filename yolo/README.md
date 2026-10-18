@@ -1,3 +1,5 @@
+> Bundled upstream reference: for LithoDefectV1, follow the [project README](../README.md). Install this bundled version with `python -X utf8 -m pip install -e ./yolo` from the repository root; the generic upstream instructions below describe the separate Ultralytics project.
+
 <div align="center">
   <p>
     <a href="https://www.ultralytics.com/blog/ultralytics-yolo11-has-arrived-redefine-whats-possible-in-ai" target="_blank">
