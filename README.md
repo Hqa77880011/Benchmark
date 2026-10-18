@@ -1,54 +1,54 @@
-# LithoDefectV1 — 光刻缺陷分割合成基准
+# LithoDefectV1 — A Synthetic Benchmark for Lithography Defect Segmentation
 
 > **Advancing Lithography Process Control in Integrated Circuit Manufacturing via a Synthetic Benchmark for Defect Segmentation**
 >
 > Qinao Hu, Jiwei Shen — East China Normal University
 >
-> **IEEE Transactions on Semiconductor Manufacturing：大修返修已完成，审稿中。**
+> **IEEE Transactions on Semiconductor Manufacturing: Major revision completed; under review.**
 
-LithoDefectV1 包含 3,600 对合成 SEM 风格图像与像素级缺陷标注，覆盖 8 类缺陷。本仓库提供合成流水线、YOLO / Swin-UNet 训练入口、SAM 工具和掩码评估脚本。
+LithoDefectV1 contains 3,600 pairs of synthetic SEM-style images and pixel-level defect annotations spanning 8 defect categories. This repository provides the synthesis pipeline, YOLO and Swin-UNet training entry points, SAM tools, and mask evaluation scripts.
 
-## 论文修订与评测协议
+## Manuscript Revision and Evaluation Protocol
 
-修订稿采用以下三层评测。Open-test 是同分布留出测试，不能解释为开放集识别或跨背景域测试。
+The revised manuscript uses the following three-tier evaluation protocol. Open-test measures in-distribution generalization on held-out samples; it does not represent open-set recognition or cross-background-domain evaluation.
 
-| 场景 | 图像数 | 定义 |
+| Split / Scenario | Images | Definition |
 | --- | ---: | --- |
-| Train | 2,518 | LithoDefectV1 训练样本 |
-| Open-test | 1,082 | 通过分层 7:3 划分留出的合成样本 |
-| Re-synth-test | 300 | 使用相同合成流程、不同随机种子独立生成的样本 |
-| Fab-test | 92 | 合成流程之外采集并独立标注的真实工业 SEM 图像 |
+| Train | 2,518 | Training samples from LithoDefectV1 |
+| Open-test | 1,082 | Synthetic samples held out through a stratified 7:3 split |
+| Re-synth-test | 300 | Samples independently generated using the same synthesis pipeline with a different random seed |
+| Fab-test | 92 | Real industrial SEM images acquired outside the synthesis pipeline and independently annotated |
 
-SAM 使用 **129 张 Open-test 分层子集**，以及完整的 Re-synth-test 和 Fab-test，均为零样本推理。SAM 与其他模型的 Open-test 样本数不同。
+SAM is evaluated in a zero-shot setting on a **stratified subset of 129 Open-test images** and the complete Re-synth-test and Fab-test sets. Its Open-test sample count differs from that of the other models.
 
-本次更新修复了合成参数传递、源码 LFS 指针、验证加载器、数据配对和运行入口。详细的版本边界与验证方式见 [复现说明](docs/REPRODUCIBILITY.md)。论文表格中的数字来自修订稿，本次仓库维护没有重新训练模型或重算这些实验。
+This update fixes synthesis parameter dispatch, LFS pointers in source files, validation data loading, data pairing, and execution entry points. See the [reproducibility notes](docs/REPRODUCIBILITY.md) for version boundaries and validation procedures. The results below are transcribed from the revised manuscript; this repository maintenance did not retrain the models or recompute those experiments.
 
-## 仓库结构
+## Repository Structure
 
 ```text
 Benchmark/
 ├── README.md
-├── docs/REPRODUCIBILITY.md       # 论文协议、代码行为、资源与验证记录
-├── data.zip                      # Git LFS 数据资源
-├── compute.py                    # 完整配对的二值掩码评估
-├── tests/test_workflow.py         # 与本次修复对应的回归检查
+├── docs/REPRODUCIBILITY.md       # Paper protocol, code behavior, resources, and validation
+├── data.zip                      # Dataset resource managed with Git LFS
+├── compute.py                    # Binary mask evaluation with complete prediction pairing
+├── tests/test_workflow.py         # Regression checks for the fixes in this update
 ├── synthesis_pipeline/
-│   ├── run_pipeline.py           # 合成 → 划分 → 格式导出
+│   ├── run_pipeline.py           # Synthesis → splitting → format export
 │   ├── config.yaml
 │   └── lithodefect/
-├── yolo/                         # 保留本地 Ultralytics 实现及其许可证
-│   ├── trains.py                 # 参数化实例分割训练入口
+├── yolo/                         # Bundled Ultralytics implementation and its license
+│   ├── trains.py                 # Parameterized instance segmentation training entry point
 │   └── ultralytics/
-├── unet/                         # Swin-UNet、PNG/NPZ 加载器、训练与推理
-│   └── UPSTREAM.md               # 原始 Swin-Unet 说明与引用
-└── sam/                          # SAM 实现与交互式标注工具
+├── unet/                         # Swin-UNet, PNG/NPZ loaders, training, and inference
+│   └── UPSTREAM.md               # Original Swin-Unet documentation and citation
+└── sam/                          # SAM implementation and interactive annotation tools
 ```
 
-上游演示网站、示例、文档构建、测试镜像、缓存和旧日志不作为本基准的运行依赖提交。模型实现、配置、许可证和已有权重入口保留。
+Upstream demo websites, examples, documentation builds, test infrastructure, caches, and old logs are excluded from the benchmark's runtime dependencies. Model implementations, configurations, licenses, and existing checkpoint resources are retained.
 
-## 获取数据与权重
+## Obtaining Data and Checkpoints
 
-请使用 Git 克隆仓库。GitHub 的 ZIP 源码下载可能只包含大文件的 LFS 指针。
+Clone the repository with Git. GitHub source ZIP downloads may contain only LFS pointers for large files.
 
 ```bash
 git clone https://github.com/Hqa77880011/Benchmark.git
@@ -58,17 +58,17 @@ git lfs pull --include="data.zip"
 python -m zipfile -e data.zip data
 ```
 
-按需下载已有模型资源，避免一次拉取所有权重：
+Download existing model resources as needed instead of fetching all checkpoints at once:
 
 ```bash
 git lfs pull --include="unet/*.pth,unet/pretrained_ckpt/*.pth,yolo/best_*"
 ```
 
-数据压缩包与模型仍通过原有 LFS 对象提供；本次未下载或验证全部大文件。合成流程要求独立准备种子缺陷图、对应掩码与背景，不能把发布图像集默认当作完整种子素材。具体输入结构见 [合成流水线说明](synthesis_pipeline/README.md)。
+The dataset archive and models remain available through their existing LFS objects. Not all large files were downloaded or verified during this update. Running the synthesis pipeline requires separately prepared seed defect images, corresponding masks, and backgrounds; the released image dataset should not be assumed to contain the complete seed material. See the [synthesis pipeline documentation](synthesis_pipeline/README.md) for the required input structure.
 
-## 合成与训练
+## Synthesis and Training
 
-以下命令从仓库根目录执行。合成 CPU 即可运行，模型训练需另行安装 PyTorch 与模型依赖。
+Run the following commands from the repository root. Synthesis can run on a CPU; model training requires PyTorch and the relevant model dependencies to be installed separately.
 
 ```bash
 python -m pip install -r synthesis_pipeline/requirements.txt
@@ -76,20 +76,20 @@ python synthesis_pipeline/run_pipeline.py --list-steps
 python synthesis_pipeline/run_pipeline.py --config synthesis_pipeline/config.yaml
 ```
 
-配置中的路径相对于 **YAML 文件所在目录** 解析。默认输入位于 `synthesis_pipeline/data/`，输出位于 `synthesis_pipeline/output/`。同一配置与随机种子可重现生成过程；重新运行时使用空输出目录，避免混入旧样本。
+Configuration paths are resolved relative to the **directory containing the YAML file**. Default inputs are located in `synthesis_pipeline/data/`, and outputs are written to `synthesis_pipeline/output/`. The same configuration and random seed reproduce the generation process. Use empty output directories for a fresh run to avoid mixing new samples with previous outputs.
 
-默认划分工具按类别和背景来源生成 70/10/10/10 的 train、val、test/private、test/public，**这是工具的可配置划分，不是论文原始 7:3 划分的索引复刻**。两种背景来源都会进入训练/验证。`test_private` 仍是合成图像，不能当作 Fab-test；`test_public` 也不能直接当作论文 Open-test。论文逐样本划分清单及完整实验环境尚未随本次维护补齐。
+The default splitting utility stratifies by category and background source to create train, val, test/private, and test/public splits in a 70/10/10/10 ratio. **This is a configurable utility split, not a reconstruction of the paper's original 7:3 split indices.** Both background sources contribute to training and validation. `test_private` contains synthetic images and must not be treated as Fab-test; `test_public` must not be directly equated with the paper's Open-test. The paper's sample-level split lists and complete experimental environment have not been supplied as part of this maintenance update.
 
-YOLO 使用仓库内保留的 Ultralytics 版本，安装和训练：
+Install and train YOLO using the Ultralytics version bundled in this repository:
 
 ```bash
 python -m pip install -e ./yolo
 python yolo/trains.py --data synthesis_pipeline/output/synthetic_yolo/data.yaml --model yolo11n-seg.pt --device 0 --imgsz 384 --epochs 50 --batch 64
 ```
 
-`--model` 需要分割模型或分割架构；其他 YOLO 版本请传入对应 checkpoint。本地保留版本见 `yolo/ultralytics/__init__.py`，不依赖自动安装最新版本。
+`--model` requires a segmentation model or segmentation architecture. Supply the corresponding checkpoint to use another YOLO version. The bundled version is recorded in `yolo/ultralytics/__init__.py`; these commands do not rely on automatically installing the latest release.
 
-Swin-UNet 默认导出二值缺陷标签（背景 0、缺陷 1），与 2 输出通道配套。可选的八类语义分割需设置 `swinunet.binary: false`，并使用 `--num_classes 9`；这属于不同实验设置。
+Swin-UNet export uses binary defect labels by default: background is 0 and defect is 1, matching a model with 2 output channels. For the optional eight-category semantic segmentation setting, set `swinunet.binary: false` and use `--num_classes 9`. This constitutes a different experimental setting.
 
 ```bash
 python -m pip install -r unet/requirements.txt
@@ -98,23 +98,23 @@ python train.py --root_path ../synthesis_pipeline/output/swin_unet_data --datase
 python test.py --root_path ../synthesis_pipeline/output/swin_unet_data --dataset LithoDefect --output_dir ./model_out --num_classes 2 --split_name test_public
 ```
 
-预训练 Swin-T 权重需先通过 LFS 获取。PNG 数据按现有 train/val 目录读取，验证集不做随机增强；旧 NPZ 数据入口继续支持显式 `--list_dir`。SAM 安装、标注与提示操作见 [SAM 工具说明](sam/SAM-Tool/README.md)。
+Fetch the pretrained Swin-T checkpoint through LFS before training. PNG data are read from the existing train/val directories, and validation uses no random augmentation. Legacy NPZ inputs continue to support an explicit `--list_dir`. See the [SAM tool documentation](sam/SAM-Tool/README.md) for installation, annotation, and prompting instructions.
 
-## 掩码评估
+## Mask Evaluation
 
 ```bash
 python compute.py --gt-dir data/masks --pred-dir results/pred_masks --output-dir results --suffix _mask
 ```
 
-预测文件名为 `<GT文件主名><suffix>.png`。预测使用相同文件名时传入 `--suffix ""`。缺失预测、空数据、损坏文件或尺寸不符会报错；确需对齐尺寸时显式传入 `--resize`，使用最近邻插值。
+Prediction filenames follow `<GT filename stem><suffix>.png`. Pass `--suffix ""` when predictions use the same filenames as the ground-truth masks. Missing predictions, empty datasets, corrupted files, or mismatched dimensions raise errors. When dimension alignment is required, explicitly enable `--resize`, which uses nearest-neighbor interpolation.
 
-输出 `metrics_results.txt`，记录样本数、实际文件名、逐图指标和平均指标。默认 `--average image` 为逐图宏平均。若文件主名以 `<Category>_` 开头，可用 `--average category` 先按类别取平均、再对类别等权平均。两种汇总方式不能混用。大于 0 的像素视为前景，零分母按 0 处理。
+The output file, `metrics_results.txt`, records the sample count, actual filenames, per-image metrics, and aggregate metrics. The default `--average image` computes a macro-average over images. If filenames begin with `<Category>_`, use `--average category` to average within each category first and then give each category equal weight. These aggregation rules are distinct and should not be mixed. Pixel values greater than 0 are treated as foreground; metrics with a zero denominator are assigned 0.
 
-## 修订稿报告的结果
+## Results Reported in the Revised Manuscript
 
-以下仅为修订稿表格转录，保留四位小数。SAM 的 Open-test 使用 129 张子集。
+The following values are transcribed from the revised manuscript and retain four decimal places. SAM uses a subset of 129 images for Open-test.
 
-| 模型 | 测试集 | mIoU | Dice | Precision | Recall |
+| Model | Test Set | mIoU | Dice | Precision | Recall |
 | --- | --- | ---: | ---: | ---: | ---: |
 | YOLOv8-seg | Open-test | 0.8508 | 0.9177 | 0.8663 | 0.9786 |
 | YOLOv8-seg | Re-synth-test | 0.8155 | 0.8841 | 0.8320 | 0.9435 |
@@ -135,9 +135,9 @@ python compute.py --gt-dir data/masks --pred-dir results/pred_masks --output-dir
 | Swin-UNet | Re-synth-test | 0.8280 | 0.8921 | 0.8905 | 0.8804 |
 | Swin-UNet | Fab-test | 0.8348 | 0.8927 | 0.8934 | 0.8849 |
 
-## 引用与许可
+## Citation and Licensing
 
-论文仍在审稿阶段，暂不填写已发表期刊卷期、页码或 DOI。
+The manuscript remains under review. Published volume, issue, page numbers, and DOI are therefore not listed.
 
 ```bibtex
 @unpublished{hu_lithodefect_revision,
@@ -147,6 +147,6 @@ python compute.py --gt-dir data/masks --pred-dir results/pred_masks --output-dir
 }
 ```
 
-数据集沿用原 README 声明的 CC BY 4.0，自有代码沿用原 README 的 MIT 声明。第三方目录保留各自的许可证：YOLO 见 [yolo/LICENSE](yolo/LICENSE)，SAM 见 [sam/segment-anything/LICENSE](sam/segment-anything/LICENSE) 与 [sam/SAM-Tool/LICENSE](sam/SAM-Tool/LICENSE)。根目录的许可声明不覆盖这些第三方代码。
+The dataset retains the CC BY 4.0 declaration in the original README, and project-authored code retains its MIT declaration. Third-party directories retain their respective licenses: see [yolo/LICENSE](yolo/LICENSE) for YOLO, and [sam/segment-anything/LICENSE](sam/segment-anything/LICENSE) and [sam/SAM-Tool/LICENSE](sam/SAM-Tool/LICENSE) for the SAM components. The repository-level license declaration does not override the licenses of third-party code.
 
-代码与数据问题请通过 [GitHub Issues](https://github.com/Hqa77880011/Benchmark/issues) 反馈。
+Please report code or dataset issues through [GitHub Issues](https://github.com/Hqa77880011/Benchmark/issues).
