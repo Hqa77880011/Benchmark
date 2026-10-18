@@ -223,4 +223,16 @@ The manuscript remains under review. Published volume, issue, page numbers, and 
 
 The dataset retains the CC BY 4.0 declaration in the original README, and project-authored code retains its MIT declaration. Third-party directories retain their respective licenses: see [yolo/LICENSE](yolo/LICENSE) for YOLO, and [sam/segment-anything/LICENSE](sam/segment-anything/LICENSE) and [sam/SAM-Tool/LICENSE](sam/SAM-Tool/LICENSE) for the SAM components. The repository-level license declaration does not override the licenses of third-party code.
 
+## Fixed replacement evaluation setting
+
+Use the saved seed-42 70/10/20 utility split for every model, retraining supervised models on that split. Binary Swin uses 2 classes; original-size predictions from every method feed the same category-macro foreground evaluator. The default SAM setting now evaluates **every image** in the utility test cohort, with image-only local-contrast prompts and fixed confidence/area selection. It needs an existing SAM checkpoint, without labels or manual prompts at prediction time.
+
+```bash
+python -m pip install -e sam/segment-anything scipy Pillow
+python sam/predict_masks.py --images output/benchmark/swin_unet/test/img --output output/sam --checkpoint checkpoints/sam_vit_b.pth --model-type vit_b
+python compute.py --gt-dir output/benchmark/swin_unet/test/mask --pred-dir output/sam --output-dir output/sam_metrics --suffix= --average category
+```
+
+The registered defaults are median window 15, absolute local-contrast threshold at least 12/255 and the image's 99.5th percentile, at most 32 connected-component peak prompts, SAM score >=0.8, proposal area <=15%, and cumulative foreground <=35%. Ties prefer smaller masks then candidate order. Images with no accepted foreground still receive a zero mask. These settings define a contrast-prompted SAM baseline and replace the unspecified historical proposal rule. `protocol.json` records the entire cohort, settings and accepted prompts. Select alternatives on validation only and freeze them before test; do not tune from test masks. Actual scores must be computed from new outputs, separately from the historical table above.
+
 Please report code or dataset issues through [GitHub Issues](https://github.com/Hqa77880011/Benchmark/issues).

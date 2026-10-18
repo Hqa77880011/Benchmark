@@ -4,6 +4,8 @@ Status: the manuscript's major revision has been completed, and the manuscript r
 
 ## Relationship Between the Paper and the Code
 
+The current selected reproduction setting uses the saved seed-42 utility split for all models. `sam/predict_masks.py` supplies a complete image-only contrast-prompted SAM baseline on every utility test image, with fixed proposal selection and one original-size binary prediction per image. Its `protocol.json` records the cohort and parameters; it never reads ground truth. This protocol replaces the unspecified historical SAM selection rule for new comparisons. Use a newly trained 2-class Swin checkpoint, the chosen YOLO segmentation architecture and an existing matching SAM checkpoint. The archived paper table below remains historical; new settings produce their own measured outputs.
+
 - The revised manuscript reports 2,518 Train images, 1,082 Open-test images, 300 Re-synth-test images, and 92 Fab-test images. SAM uses a subset of 129 Open-test images and the other two complete test sets.
 - The default synthesis configuration provides a runnable workflow from source material to generated data. The sample count depends on the amount of source material and the number of augmentations; it does not guarantee regeneration of exactly 3,600 images.
 - The released-data preparation utility makes a new 70/10/20 split and records it in `splits.json`. The separate synthesis utility's 70/10/10/10 split also does not use the same indices as the paper's 7:3 split. `private/public` denotes synthetic background sources; `test_private` is not the real Fab-test set.
