@@ -6,6 +6,8 @@
 # =============================================================================
 
 # --- Paths ---
+# All paths are relative to this YAML file.
+seed: 42
 paths:
   defect_img_dir: "data/defects/images"       # Seed defect images
   defect_mask_dir: "data/defects/masks"        # Seed defect masks
@@ -25,8 +27,8 @@ category_mapping:
   residue:  ["ResidueLeft", "Needle"]
 
 # --- Background Groups ---
-# private: used for train/val/test_private (typically fab backgrounds)
-# public:  used for test_public (typically open-source backgrounds)
+# Source groups label synthetic backgrounds, not the paper's Fab-test data.
+# Both groups contribute to train/val; held-out source subsets are kept separately.
 bg_groups:
   private:
     prefixes: ["luhu_", "chip_"]   # Filename prefixes for private backgrounds
@@ -56,8 +58,8 @@ synthesis_params:
 split:
   train_ratio: 0.70
   val_ratio: 0.10
-  test_private_ratio: 0.10   # Private backgrounds only
-  test_public_ratio: 0.10    # Public backgrounds only
+  test_private_ratio: 0.10   # Synthetic samples with private-source backgrounds
+  test_public_ratio: 0.10    # Synthetic samples with public-source backgrounds
   seed: 42
 
 # --- Class Name → Integer ID ---
@@ -70,6 +72,11 @@ class_mapping:
   ParticleContam: 5
   ResidueLeft: 6
   Spindle: 7
+
+# The paper's Swin-UNet task is binary defect segmentation (2 output channels).
+# Set false for an optional 9-channel background + 8-category experiment.
+swinunet:
+  binary: true
 
 # --- Pipeline Control ---
 # Set individual steps to false to skip them

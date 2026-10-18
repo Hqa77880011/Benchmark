@@ -27,19 +27,20 @@ def gather_samples(src_root):
         if not os.path.isdir(img_root):
             continue
 
-        for cat in os.listdir(img_root):
+        for cat in sorted(os.listdir(img_root)):
             cat_img_dir = os.path.join(img_root, cat)
             cat_mask_dir = os.path.join(mask_root, cat)
             if not os.path.isdir(cat_img_dir):
                 continue
 
-            for fname in os.listdir(cat_img_dir):
+            for fname in sorted(os.listdir(cat_img_dir)):
                 if not fname.lower().endswith('.png'):
                     continue
                 img_path = os.path.join(cat_img_dir, fname)
                 mask_path = os.path.join(cat_mask_dir, fname)
-                if os.path.exists(mask_path):
-                    groups[(cat, bg_src)].append((img_path, mask_path))
+                if not os.path.isfile(mask_path):
+                    raise FileNotFoundError(f"Missing paired mask: {mask_path}")
+                groups[(cat, bg_src)].append((img_path, mask_path))
 
     return groups
 
@@ -74,13 +75,20 @@ def split_dataset(src_root, out_root,
     Returns:
         dict with counts for each split
     """
-    assert abs(train_ratio + val_ratio + test_private_ratio + test_public_ratio - 1.0) < 1e-6
-
-    random.seed(seed)
+    ratios = [train_ratio, val_ratio, test_private_ratio, test_public_ratio]
+    if any(r < 0 for r in ratios) or abs(sum(ratios) - 1.0) >= 1e-6:
+        raise ValueError("Split ratios must be nonnegative and sum to 1.")
+    if train_ratio + val_ratio == 0:
+        raise ValueError("At least one train/val ratio must be positive.")
+    if os.path.isdir(out_root) and os.listdir(out_root):
+        raise FileExistsError(f"Use an empty split output directory: {out_root}")
+    rng = random.Random(seed)
 
     print("Collecting samples...")
     groups = gather_samples(src_root)
     total_all = sum(len(v) for v in groups.values())
+    if not total_all:
+        raise ValueError(f"No image-mask pairs found in {src_root}")
     print(f"  Found {total_all} samples across {len(groups)} (category, bg) groups")
 
     # Per-category statistics
@@ -96,6 +104,10 @@ def split_dataset(src_root, out_root,
 
     total_private = sum(len(v) for (c, bg), v in groups.items() if bg == "private")
     total_public = sum(len(v) for (c, bg), v in groups.items() if bg == "public")
+    for source, count, ratio in [("private", total_private, test_private_ratio),
+                                  ("public", total_public, test_public_ratio)]:
+        if ratio * total_all > count:
+            raise ValueError(f"Not enough {source} samples for requested test ratio.")
 
     private_test_ratio_group = (test_private_ratio * total_all / total_private
                                 if total_private > 0 else 0)
@@ -103,7 +115,6 @@ def split_dataset(src_root, out_root,
                                if total_public > 0 else 0)
 
     train_of_remaining = train_ratio / (train_ratio + val_ratio)
-    val_of_remaining = val_ratio / (train_ratio + val_ratio)
 
     stats = {"train": 0, "val": 0, "test/private": 0, "test/public": 0}
 
@@ -111,13 +122,13 @@ def split_dataset(src_root, out_root,
         test_ratio = (private_test_ratio_group if bg_src == "private"
                       else public_test_ratio_group)
 
-        random.shuffle(items)
+        rng.shuffle(items)
         n = len(items)
-        n_test = max(1, int(n * test_ratio)) if n >= 3 else 0
+        n_test = int(n * test_ratio)
         test_items = items[:n_test]
         remaining = items[n_test:]
 
-        random.shuffle(remaining)
+        rng.shuffle(remaining)
         n_rem = len(remaining)
         n_train = int(n_rem * train_of_remaining)
         train_items = remaining[:n_train]

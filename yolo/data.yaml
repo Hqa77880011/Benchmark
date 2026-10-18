@@ -1,7 +1,0 @@
-train_yolo12: /home/Hqa/yolo/yolo11/dataset/images/train
-val: /home/Hqa/yolo/yolo11/dataset/images/val
-train: /home/Hqa/yolo/yolo11/dataset/images/train
-nc: 8
-
-# Classes
-names: ['ArchDeform', 'Block', 'Droplet', 'Flake', 'Needle', 'ParticleContam', 'ResidueLeft', 'Spindle']

@@ -20,7 +20,6 @@ import cv2
 import numpy as np
 import random
 from tqdm import tqdm
-from collections import defaultdict
 
 from .transforms import apply_transforms
 from .composite import composite
@@ -54,7 +53,7 @@ class Synthesizer:
         bg_dir = self.config["bg_dir"]
         groups = {name: [] for name in self.config["bg_groups"]}
 
-        for fname in os.listdir(bg_dir):
+        for fname in sorted(os.listdir(bg_dir)):
             if not fname.lower().endswith('.png'):
                 continue
             fpath = os.path.join(bg_dir, fname)
@@ -87,7 +86,7 @@ class Synthesizer:
         defect_mask_dir = self.config["defect_mask_dir"]
         skip_dirs = self.config.get("skip_dirs", ["good", "fail"])
 
-        defect_types = [d for d in os.listdir(defect_img_dir)
+        defect_types = [d for d in sorted(os.listdir(defect_img_dir))
                         if os.path.isdir(os.path.join(defect_img_dir, d))
                         and d not in skip_dirs and d in mapping]
 
@@ -109,18 +108,29 @@ class Synthesizer:
                 defect_img = cv2.imread(img_path)
                 defect_mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
                 if defect_img is None or defect_mask is None:
-                    continue
+                    raise OSError(f"Could not read seed image/mask: {img_path}, {mask_path}")
 
                 for aug_idx in range(num_aug):
                     # Stage 2: Geometric augmentation (each iteration = fresh random params)
                     fg = defect_img.copy()
                     mk = defect_mask.copy()
-                    fg, mk = apply_transforms(fg, mk, **params)
+                    transform_keys = {
+                        "enable_hflip", "enable_vflip", "enable_rotation",
+                        "scale_range", "enable_distortion", "distortion_types",
+                        "stretch_range", "perspective_offset", "barrel_k1_range",
+                        "barrel_k2_range",
+                    }
+                    fg, mk = apply_transforms(
+                        fg, mk, **{k: v for k, v in params.items() if k in transform_keys})
 
                     # Stage 3: Image composition
                     bg_path, bg_img = random.choice(bg_list)
                     bg_base = os.path.splitext(os.path.basename(bg_path))[0]
-                    result_img, result_mask = composite(fg, mk, bg_img.copy(), **params)
+                    composite_keys = {"feather_kernel_size", "enable_feather",
+                                      "avoid_center", "center_region_ratio"}
+                    result_img, result_mask = composite(
+                        fg, mk, bg_img,
+                        **{k: v for k, v in params.items() if k in composite_keys})
 
                     # Round-robin assignment to target categories
                     target_cat = target_categories[aug_idx % len(target_categories)]
@@ -130,15 +140,23 @@ class Synthesizer:
                     os.makedirs(out_img_dir, exist_ok=True)
                     os.makedirs(out_mask_dir, exist_ok=True)
 
-                    out_name = f"{defect_type}_{base}_aug{aug_idx}_bg{bg_base}.png"
-                    cv2.imwrite(os.path.join(out_img_dir, out_name), result_img)
-                    cv2.imwrite(os.path.join(out_mask_dir, out_name), result_mask)
+                    out_name = f"{target_cat}_{group_name}_{defect_type}_{base}_aug{aug_idx}_bg{bg_base}.png"
+                    for directory, array in [(out_img_dir, result_img),
+                                             (out_mask_dir, result_mask)]:
+                        path = os.path.join(directory, out_name)
+                        if not cv2.imwrite(path, array):
+                            raise OSError(f"Could not write image: {path}")
                     total += 1
 
         return total
 
     def run(self):
         """Execute the full synthesis pipeline."""
+        random.seed(self.config.get("seed", 42))
+        np.random.seed(self.config.get("seed", 42))
+        output_root = self.config["output_root"]
+        if os.path.isdir(output_root) and os.listdir(output_root):
+            raise FileExistsError(f"Use an empty synthesis output directory: {output_root}")
         print("=" * 55)
         print("Stage 1: Defect Extraction — Loading seed defects & backgrounds...")
         bg_groups = self.load_backgrounds()
@@ -148,8 +166,7 @@ class Synthesizer:
             num_aug = cfg["num_aug"]
             bg_list = bg_groups.get(group_name, [])
             if not bg_list:
-                print(f"  WARNING: No backgrounds for '{group_name}', skipping.")
-                continue
+                raise ValueError(f"No backgrounds for configured group: {group_name}")
 
             print(f"\nStage 2 & 3: Geometric Augmentation + Image Composition")
             print(f"  Group: {group_name} | {num_aug}x per defect | {len(bg_list)} backgrounds")
@@ -161,4 +178,6 @@ class Synthesizer:
         print(f"Pipeline complete! Total: {grand_total} synthetic images")
         print(f"Output: {self.config['output_root']}")
         print(f"{'=' * 55}")
+        if grand_total == 0:
+            raise ValueError("No synthetic pairs generated; check seed image/mask paths.")
         return grand_total

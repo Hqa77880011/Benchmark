@@ -1,256 +1,61 @@
-# LithoDefectV1 — Synthetic Benchmark for Lithography Defect Segmentation
+# LithoDefectV1 synthesis pipeline
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+This folder implements seed loading, synchronized geometric augmentation, alpha composition, stratified splitting and YOLO / Swin-UNet export. The paper's revision status and reported benchmark results are maintained in the [repository README](../README.md).
 
-Official implementation of the synthesis pipeline described in:
+## Run
 
-> **Advancing Lithography Process Control in Integrated Circuit Manufacturing via a Synthetic Benchmark for Defect Segmentation**
->
-> Qinao Hu, Jiwei Shen — East China Normal University
-
-**LithoDefectV1** is the first publicly accessible benchmark dataset for lithography defect segmentation, containing **3,600 high-resolution SEM-style images** with **pixel-level annotations** across **8 defect categories**.
-
-📦 **Dataset & Code**: [https://github.com/Hqa77880011/Benchmark](https://github.com/Hqa77880011/Benchmark)
-
----
-
-## Overview
-
-Semiconductor lithography defect data is heavily restricted by industrial confidentiality — this "data silo" problem prevents reproducible research in automated defect inspection. This repository provides a **privacy-preserving synthesis pipeline** that generates high-fidelity defect segmentation data without exposing proprietary fab information.
-
-### Pipeline Architecture
-
-```
-┌─────────────────────┐
-│  Seed Defect Images │  (extracted from limited real samples)
-│  + Binary Masks     │
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────────┐
-│  Stage 1: Geometric │  Random flips, rotation, scaling,
-│  Augmentation       │  elastic/perspective/barrel distortion
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────────┐
-│  Stage 2: Image     │  Gaussian feathering + Alpha blending
-│  Composition        │  on public background patterns
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────────┐
-│  3,600 Synthetic    │  8 defect classes, 360×360 px,
-│  Image-Mask Pairs   │  pixel-perfect annotations
-└─────────────────────┘
-```
-
----
-
-## Quick Start
-
-### 1. Install dependencies
+From the repository root:
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r synthesis_pipeline/requirements.txt
+python synthesis_pipeline/run_pipeline.py --config synthesis_pipeline/config.yaml
+python synthesis_pipeline/run_pipeline.py --step synthesis
+python synthesis_pipeline/run_pipeline.py --step split
+python synthesis_pipeline/run_pipeline.py --step yolo
+python synthesis_pipeline/run_pipeline.py --step swinunet
 ```
 
-### 2. Prepare your data
+All paths in YAML are relative to that YAML file. The default config reads `synthesis_pipeline/data/` and writes `synthesis_pipeline/output/`. Supply an empty output directory for a fresh run. Set `seed` for reproducibility. The number and resolution of generated pairs follow the supplied seeds, background sizes and `num_aug`; the config does not enforce the published dataset size.
 
-Place your data in the following structure:
+## Inputs
 
-```
+```text
 data/
-├── defects/
-│   ├── images/          # Seed defect cutouts (PNG)
-│   │   ├── arching/     #   arching_001.png, ...
-│   │   ├── particle/    #   particle_001.png, ...
-│   │   ├── peeling/     #   peeling_001.png, ...
-│   │   └── residue/     #   residue_001.png, ...
-│   └── masks/            # Corresponding binary masks
-│       ├── arching/      #   arching_001_mask.png, ...
-│       ├── particle/
-│       ├── peeling/
-│       └── residue/
-└── backgrounds/          # Defect-free background images (256×256)
-    ├── shen_001.png      #   Public/open-source backgrounds (shen_ prefix)
-    └── chip_001.png      #   Private/fab backgrounds (chip_, luhu_ prefix)
+├── defects/images/<source_type>/seed.png
+├── defects/masks/<source_type>/seed_mask.png
+└── backgrounds/
+    ├── chip_001.png       # private source group
+    ├── luhu_001.png       # private source group
+    └── shen_001.png       # public source group
 ```
 
-### 3. Edit configuration
+The four example source types are `arching`, `particle`, `peeling`, `residue`; edit `category_mapping` and `class_mapping` for your own material. The mapping assigns target categories round-robin; users must check that their seed morphology supports those category labels. Seed material must be prepared separately; an archive of final benchmark images does not necessarily contain it.
 
-All parameters are in a single file: **`config.yaml`**
+Geometric masks use nearest interpolation. Feathering creates the image blending alpha only; exported ground-truth remains binary.
 
-```yaml
-paths:
-  defect_img_dir: "data/defects/images"
-  defect_mask_dir: "data/defects/masks"
-  bg_dir: "data/backgrounds"
+## Outputs and split meaning
 
-bg_groups:
-  private:
-    num_aug: 50    # 50 synthetic samples per seed defect (private bg)
-  public:
-    num_aug: 30    # 30 synthetic samples per seed defect (public bg)
-```
-
-### 4. Run the pipeline
-
-```bash
-# Full pipeline (synthesis → split → export)
-python run_pipeline.py
-
-# Single step only
-python run_pipeline.py --step synthesis
-python run_pipeline.py --step split
-python run_pipeline.py --step yolo
-python run_pipeline.py --step swinunet
-
-# Use custom config
-python run_pipeline.py --config my_config.yaml
-```
-
----
-
-## Output Structure
-
-After running the full pipeline:
-
-```
+```text
 output/
-├── synthetic_defects/              # Raw synthetic data
-│   ├── private/img/ArchDeform/...  # Private bg, 50x per defect
-│   ├── private/mask/ArchDeform/...
-│   ├── public/img/ArchDeform/...   # Public bg, 30x per defect
-│   └── public/mask/ArchDeform/...
-│
-├── synthetic_defects_split/        # Stratified split (7:1:1:1)
-│   ├── train/img/ + mask/
-│   ├── val/img/ + mask/
-│   ├── test/private/img/ + mask/
-│   └── test/public/img/ + mask/
-│
-├── synthetic_yolo/                 # YOLO segmentation format
-│   ├── images/{train,val,test_private,test_public}/
-│   ├── labels/{train,val,test_private,test_public}/
-│   └── data.yaml
-│
-└── swin_unet_data/                 # Swin-UNet format
-    └── {train,val,test_private,test_public}/
-        ├── img/  (RGB)
-        └── mask/ (class-index, 0=background)
+├── synthetic_defects/{private,public}/{img,mask}/<category>/*.png
+├── synthetic_defects_split/{train,val,test/private,test/public}/{img,mask}/<category>/*.png
+├── synthetic_yolo/{images,labels}/{train,val,test_private,test_public}/
+│   └── data.yaml          # stored at synthetic_yolo/data.yaml
+└── swin_unet_data/{train,val,test_private,test_public}/{img,mask}/*.png
 ```
 
----
+The configurable split defaults to 70% train, 10% validation, 10% private-background synthetic test, 10% public-background synthetic test (subject to per-group integer rounding). Both sources contribute to train/val. It does not recreate the paper's 2,518/1,082 index lists. Neither generated test folder is the paper's real industrial Fab-test. Re-synth-test requires a separate run with a different seed and a separate output root.
 
-## Dataset Statistics
+Swin-UNet export defaults to foreground=1, background=0. Set `swinunet.binary: false` for category labels 1–8; use 9 model output channels for that setting. The model loader reads these existing PNG split folders without re-splitting them.
 
-| Defect Category | Type | Count | Description |
-|:---|---:|---:|:---|
-| ArchDeform | Geometric | 500 | Pattern distortion (OPC failure, resist collapse) |
-| Spindle | Geometric | 450 | Spindle-shaped bridging |
-| ParticleContam | Foreign Material | 400 | Particle contamination |
-| Flake | Foreign Material | 350 | Flake-shaped debris |
-| Droplet | Foreign Material | 350 | Droplet residue |
-| ResidueLeft | Process Residue | 1000 | Incomplete etch/development residue |
-| Needle | High-Aspect Ratio | 450 | Needle-shaped bridging |
-| Block | High-Aspect Ratio | 100 | Block-shaped line-end shortening |
-| **Total** | | **3,600** | |
-
----
-
-## Python API
-
-You can also use the pipeline programmatically:
+For Python use, run from this folder or add it to `PYTHONPATH`:
 
 ```python
-from lithodefect.synthesis import Synthesizer
-from lithodefect.split import split_dataset
-from lithodefect.export_yolo import export_to_yolo
-from lithodefect.export_swinunet import export_to_swinunet
-from lithodefect.dataset import LithoDefectDataset
+from run_pipeline import load_config, step_synthesis, step_split
 
-# Step 1: Synthesis
-syn = Synthesizer({...})
-syn.run()
-
-# Step 2: Split
-split_dataset("output/synthetic_defects", "output/split")
-
-# Step 3: Export
-export_to_yolo("output/split", "output/yolo")
-export_to_swinunet("output/split", "output/swin_unet")
-
-# Use in training
-dataset = LithoDefectDataset("output/swin_unet/train", mode='train')
-img, mask = dataset[0]
+config = load_config("config.yaml")
+step_synthesis(config)
+step_split(config)
 ```
 
----
-
-## Advanced Usage
-
-### Expanding an existing dataset
-
-```bash
-python tools/expand_data.py    # 3x expansion (config in script)
-```
-
-### Advanced training-time augmentation
-
-```python
-from lithodefect.augment import augment_single
-import cv2
-
-img = cv2.imread("defect.png")
-mask = cv2.imread("mask.png", cv2.IMREAD_GRAYSCALE)
-
-# Apply TPS + elastic deformation augmentation
-aug_img, aug_mask = augment_single(img, mask)
-```
-
----
-
-## Benchmark Results (from paper)
-
-| Model | Test Set | mIoU | Dice | Precision | Recall |
-|:---|---:|---:|---:|---:|---:|
-| YOLOv8 | Open-test | 0.851 | 0.918 | 0.866 | 0.979 |
-| YOLOv9 | Open-test | 0.855 | 0.920 | 0.872 | 0.977 |
-| YOLOv11 | Open-test | 0.853 | 0.919 | 0.869 | 0.978 |
-| YOLOv12 | Open-test | 0.849 | 0.917 | 0.863 | 0.981 |
-| SAM (zero-shot) | Open-test | 0.788 | 0.880 | **0.998** | 0.790 |
-| **Swin-UNet** | Open-test | **0.873** | **0.927** | 0.934 | 0.926 |
-
----
-
-## Citation
-
-If you use LithoDefectV1 in your research, please cite:
-
-```bibtex
-@article{hu2025lithodefect,
-  title={Advancing Lithography Process Control in Integrated Circuit
-         Manufacturing via a Synthetic Benchmark for Defect Segmentation},
-  author={Hu, Qinao and Shen, Jiwei},
-  journal={IEEE Transactions on Semiconductor Manufacturing},
-  year={2025},
-  note={Under review}
-}
-```
-
----
-
-## License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
-The LithoDefectV1 dataset is released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-
----
-
-## Contact
-
-- **Dataset & Code**: [GitHub Issues](https://github.com/Hqa77880011/Benchmark/issues)
-- **Email**: qinaoH@stu.ecnu.edu.cn
+The optional `lithodefect.dataset.LithoDefectDataset` reads either grouped binary inputs or exported flat PNG pairs. Use `split_ratios=None` for existing split folders. Optional tools in `tools/` have their own input configuration and are not called by the default pipeline.

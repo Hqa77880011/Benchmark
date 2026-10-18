@@ -1,3 +1,4 @@
+# Keep code and documentation in normal Git; LFS is for binary resources only.
 *.zip filter=lfs diff=lfs merge=lfs -text
 *.pth filter=lfs diff=lfs merge=lfs -text
 *.pt filter=lfs diff=lfs merge=lfs -text

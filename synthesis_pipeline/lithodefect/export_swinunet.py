@@ -35,7 +35,8 @@ DEFAULT_SPLITS = [
 ]
 
 
-def export_to_swinunet(src_root, out_root, class_mapping=None, splits=None):
+def export_to_swinunet(src_root, out_root, class_mapping=None, splits=None,
+                       binary=True):
     """
     Convert the split dataset to Swin-UNet format.
 
@@ -47,6 +48,7 @@ def export_to_swinunet(src_root, out_root, class_mapping=None, splits=None):
         out_root: Output path for Swin-UNet-formatted data
         class_mapping: dict {category_name: class_id}
         splits: List of (src_subdir, output_name) tuples
+        binary: Write foreground=1 (paper task); False keeps category IDs.
     """
     if class_mapping is None:
         class_mapping = DEFAULT_CLASS_MAPPING
@@ -71,34 +73,34 @@ def export_to_swinunet(src_root, out_root, class_mapping=None, splits=None):
         os.makedirs(out_mask_dir, exist_ok=True)
 
         samples = []
-        for cat in os.listdir(img_src_root):
+        for cat in sorted(os.listdir(img_src_root)):
             cat_img_dir = os.path.join(img_src_root, cat)
             cat_mask_dir = os.path.join(mask_src_root, cat)
             if not os.path.isdir(cat_img_dir):
                 continue
             class_id = class_mapping.get(cat)
             if class_id is None:
-                print(f"  WARNING: Unknown category '{cat}', skipping.")
-                continue
+                raise ValueError(f"Unknown category: {cat}")
 
-            for fname in os.listdir(cat_img_dir):
+            for fname in sorted(os.listdir(cat_img_dir)):
                 if fname.lower().endswith('.png'):
                     samples.append((os.path.join(cat_img_dir, fname),
                                     os.path.join(cat_mask_dir, fname),
                                     class_id))
 
         for img_path, mask_path, cls_id in tqdm(samples, desc=f"  {out_name}"):
-            # Copy image as-is (already RGB)
-            shutil.copy2(img_path, os.path.join(out_img_dir,
-                                                os.path.basename(img_path)))
-
             # Convert mask: binary (0/255) → class-index (0=bg, N=class_id)
             mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
             if mask is None:
-                continue
-            class_mask = np.where(mask > 127, cls_id, 0).astype(np.uint8)
-            cv2.imwrite(os.path.join(out_mask_dir, os.path.basename(mask_path)),
-                        class_mask)
+                raise OSError(f"Could not read mask: {mask_path}")
+            basename = os.path.basename(img_path)
+            image_out = os.path.join(out_img_dir, basename)
+            if os.path.exists(image_out):
+                raise FileExistsError(f"Duplicate export filename: {image_out}")
+            class_mask = np.where(mask > 127, 1 if binary else cls_id, 0).astype(np.uint8)
+            if not cv2.imwrite(os.path.join(out_mask_dir, basename), class_mask):
+                raise OSError(f"Could not write mask: {basename}")
+            shutil.copy2(img_path, image_out)
 
         print(f"    {out_name}: {len(samples)} images")
         total_all += len(samples)

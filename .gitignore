@@ -1,0 +1,52 @@
+# Python / tools
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+
+# Generated datasets, predictions and experiment output
+/data/
+/output/
+/results/
+/runs/
+synthesis_pipeline/data/
+synthesis_pipeline/output/
+unet/data/
+unet/output/
+unet/model_out/
+unet/predictions/
+unet/test_log/
+yolo/runs/
+wandb/
+events.out.tfevents.*
+*.log
+*.cache
+
+# Local environment and editor files
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tmp
+*.aux
+*.synctex.gz
+
+# Upstream reference material, archived outside this repository
+yolo/.github/
+yolo/docker/
+yolo/docs/
+yolo/examples/
+yolo/tests/
+yolo/.dockerignore
+yolo/mkdocs.yml
+sam/segment-anything/demo/
+sam/segment-anything/notebooks/

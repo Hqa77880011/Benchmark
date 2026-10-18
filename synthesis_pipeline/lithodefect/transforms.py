@@ -34,6 +34,7 @@ def apply_random_rotation(image, mask):
     image = cv2.warpAffine(image, M, (w, h),
                            borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
     mask = cv2.warpAffine(mask, M, (w, h),
+                          flags=cv2.INTER_NEAREST,
                           borderMode=cv2.BORDER_CONSTANT, borderValue=0)
     return image, mask
 
@@ -81,6 +82,7 @@ def apply_random_distortion(image, mask,
                                     borderMode=cv2.BORDER_CONSTANT,
                                     borderValue=(0, 0, 0))
         mask = cv2.warpPerspective(mask, M, (w, h),
+                                   flags=cv2.INTER_NEAREST,
                                    borderMode=cv2.BORDER_CONSTANT,
                                    borderValue=0)
 
@@ -89,8 +91,10 @@ def apply_random_distortion(image, mask,
         k2 = random.uniform(*barrel_k2_range)
         K = np.array([[w, 0, w / 2], [0, h, h / 2], [0, 0, 1]], dtype=np.float32)
         d = np.array([k1, k2, 0, 0, 0], dtype=np.float32)
-        image = cv2.undistort(image, K, -d)
-        mask = cv2.undistort(mask, K, -d)
+        map_x, map_y = cv2.initUndistortRectifyMap(
+            K, -d, None, K, (w, h), cv2.CV_32FC1)
+        image = cv2.remap(image, map_x, map_y, cv2.INTER_LINEAR)
+        mask = cv2.remap(mask, map_x, map_y, cv2.INTER_NEAREST)
 
     return image, mask
 

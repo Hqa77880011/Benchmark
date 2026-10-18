@@ -1,3 +1,12 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:62d340b748363a1150aedd0339843a2e1a526419bf3d426f42da73efdd9f3f26
-size 321
+MODEL:
+  TYPE: swin
+  NAME: swin_tiny_patch4_window7_224
+  DROP_PATH_RATE: 0.2
+  PRETRAIN_CKPT: "./pretrained_ckpt/swin_tiny_patch4_window7_224.pth"
+  SWIN:
+    FINAL_UPSAMPLE: "expand_first"
+    EMBED_DIM: 96
+    DEPTHS: [ 2, 2, 2, 2 ]
+    DECODER_DEPTHS: [ 2, 2, 2, 1]
+    NUM_HEADS: [ 3, 6, 12, 24 ]
+    WINDOW_SIZE: 7

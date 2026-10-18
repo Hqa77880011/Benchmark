@@ -20,13 +20,21 @@ Usage:
 import argparse
 import os
 import sys
+from pathlib import Path
 import yaml
 
 
 def load_config(config_path):
     """Load YAML configuration file."""
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+    config_path = Path(config_path).resolve()
+    with config_path.open(encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    # Configuration paths are relative to the configuration file, not shell cwd.
+    config["paths"] = {
+        key: str((config_path.parent / value).resolve())
+        for key, value in config["paths"].items()
+    }
+    return config
 
 
 def step_synthesis(config):
@@ -42,6 +50,7 @@ def step_synthesis(config):
         "bg_groups": config["bg_groups"],
         "synthesis_params": config["synthesis_params"],
         "skip_dirs": ["good", "fail"],
+        "seed": config.get("seed", 42),
     }
 
     synthesizer = Synthesizer(syn_config)
@@ -82,6 +91,7 @@ def step_export_swinunet(config):
         src_root=config["paths"]["split_output"],
         out_root=config["paths"]["swinunet_output"],
         class_mapping=swin_mapping,
+        binary=config.get("swinunet", {}).get("binary", True),
     )
 
 
@@ -99,8 +109,8 @@ PIPELINE_ORDER = ["synthesis", "split", "yolo", "swinunet"]
 def main():
     parser = argparse.ArgumentParser(
         description="LithoDefectV1 — Synthetic Benchmark Pipeline")
-    parser.add_argument("--config", default="config.yaml",
-                        help="Path to YAML config file (default: config.yaml)")
+    parser.add_argument("--config", default=str(Path(__file__).with_name("config.yaml")),
+                        help="YAML config (paths are relative to this file)")
     parser.add_argument("--step", choices=list(STEPS.keys()) + ["all"],
                         default="all",
                         help="Run a specific pipeline step (default: all)")
@@ -130,8 +140,6 @@ def main():
     if args.step == "all":
         # Run all enabled steps in order
         for step_name in PIPELINE_ORDER:
-            if not pipeline_cfg.get(f"run_{step_name.replace('yolo', 'export_yolo').replace('swinunet', 'export_swinunet')}", True):
-                continue
             # Map step names to pipeline cfg keys
             cfg_keys = {
                 "synthesis": "run_synthesis",

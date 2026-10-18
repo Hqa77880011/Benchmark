@@ -1,362 +1,152 @@
-﻿# LithoDefectV1 — 光刻缺陷分割合成基准
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Dataset: CC BY 4.0](https://img.shields.io/badge/Dataset-CC%20BY%204.0-lightgreen.svg)](https://creativecommons.org/licenses/by/4.0/)
+# LithoDefectV1 — 光刻缺陷分割合成基准
 
 > **Advancing Lithography Process Control in Integrated Circuit Manufacturing via a Synthetic Benchmark for Defect Segmentation**
 >
 > Qinao Hu, Jiwei Shen — East China Normal University
 >
-> *IEEE Transactions on Semiconductor Manufacturing, 2025 (Under Review)*
+> **IEEE Transactions on Semiconductor Manufacturing：大修返修已完成，审稿中。**
 
----
+LithoDefectV1 包含 3,600 对合成 SEM 风格图像与像素级缺陷标注，覆盖 8 类缺陷。本仓库提供合成流水线、YOLO / Swin-UNet 训练入口、SAM 工具和掩码评估脚本。
 
-## 项目简介
+## 论文修订与评测协议
 
-在半导体制造的光刻工艺中，缺陷检测是良率控制的关键环节。然而，真实的晶圆缺陷数据受到严格的工业保密限制，导致学术界的缺陷检测研究长期面临"数据孤岛"困境——研究者无法获取公开可复现的数据集。
+修订稿采用以下三层评测。Open-test 是同分布留出测试，不能解释为开放集识别或跨背景域测试。
 
-**LithoDefectV1** 是首个面向光刻缺陷分割的公开基准数据集，提供：
+| 场景 | 图像数 | 定义 |
+| --- | ---: | --- |
+| Train | 2,518 | LithoDefectV1 训练样本 |
+| Open-test | 1,082 | 通过分层 7:3 划分留出的合成样本 |
+| Re-synth-test | 300 | 使用相同合成流程、不同随机种子独立生成的样本 |
+| Fab-test | 92 | 合成流程之外采集并独立标注的真实工业 SEM 图像 |
 
-- **3600 张**高分辨率合成 SEM（扫描电子显微镜）风格图像
-- **像素级**精确标注（pixel-perfect annotation）
-- 覆盖 **8 类**典型光刻缺陷
-- 配套的**数据合成流水线**、**模型训练代码**和**评估工具**
+SAM 使用 **129 张 Open-test 分层子集**，以及完整的 Re-synth-test 和 Fab-test，均为零样本推理。SAM 与其他模型的 Open-test 样本数不同。
 
-核心思路：用**隐私保护的合成流水线**从少量种子缺陷生成大规模多样化数据，绕过工业保密限制，为自动化缺陷检测提供可复现的研究基准。
+本次更新修复了合成参数传递、源码 LFS 指针、验证加载器、数据配对和运行入口。详细的版本边界与验证方式见 [复现说明](docs/REPRODUCIBILITY.md)。论文表格中的数字来自修订稿，本次仓库维护没有重新训练模型或重算这些实验。
 
----
+## 仓库结构
 
-## 项目亮点
-
-- **任务明确**：聚焦光刻 SEM 图像中的缺陷分割，不是通用图像分割示例。
-- **数据闭环完整**：包含缺陷合成、数据划分、YOLO/Swin-UNet 格式导出、训练与评估。
-- **评估可复现**：提供 IoU、Dice、Precision、Recall 等常用分割指标计算脚本。
-- **适合扩展**：可以替换种子缺陷、背景图像和合成参数，用于新的缺陷场景。
-
-## 适用场景
-
-本仓库适合用于以下学习和研究任务：
-
-1. 光刻缺陷检测/分割实验；
-2. 合成数据生成与数据增强课程项目；
-3. YOLO 实例分割和 Swin-UNet 语义分割对比实验；
-4. 工业视觉场景下跨域泛化能力测试。
-
-## 目录
-
-- [项目结构](#项目结构)
-- [数据集信息](#数据集信息)
-- [合成流水线](#合成流水线)
-- [快速开始](#快速开始)
-- [基准结果](#基准结果)
-- [Python API 使用](#python-api-使用)
-- [引用](#引用)
-- [许可证](#许可证)
-
----
-
-## 项目结构
-
-```
+```text
 Benchmark/
-├── data.zip                       # 数据集压缩包（需解压使用）
-├── compute.py                     # 分割评估指标计算（IoU / Dice / Precision / Recall）
-├── README.md                      # 项目文档（本文件）
-│
-├── synthesis_pipeline/            # 【核心】数据合成流水线
-│   ├── run_pipeline.py            #   一键运行入口
-│   ├── config.yaml                #   全局配置文件
-│   ├── lithodefect/               #   Python 工具包
-│   │   ├── synthesis.py           #     合成引擎（主控）
-│   │   ├── augment.py             #     几何/光度增强
-│   │   ├── transforms.py          #     空间变换（仿射/透视/桶形畸变）
-│   │   ├── composite.py           #     图像合成（羽化 + Alpha 混合）
-│   │   ├── split.py               #     数据集分层划分
-│   │   ├── export_yolo.py         #     导出 YOLO 训练格式
-│   │   ├── export_swinunet.py     #     导出 Swin-UNet 训练格式
-│   │   └── dataset.py             #     PyTorch Dataset 接口
-│   └── tools/                     #   辅助工具
-│       ├── expand_data.py         #     数据集扩充（3× 扩展）
-│       └── convert_labels.py      #     标注格式转换
-│
-├── yolo/                          # YOLO 实例分割模型
-│   ├── trains.py                  #   训练脚本（支持 YOLOv8/v9/v11/v12）
-│   ├── data.yaml                  #   数据集配置
-│   └── best_8 ~ best_12           #   预训练权重文件
-│
-├── unet/                          # Swin-UNet Transformer 分割模型
-│   ├── train.py                   #   训练脚本
-│   ├── test.py                    #   测试/推理脚本
-│   ├── trainer.py                 #   训练器封装
-│   ├── config.py                  #   模型配置
-│   ├── utils.py                   #   工具函数
-│   ├── configs/                   #   模型结构 YAML 配置
-│   ├── networks/                  #   网络结构定义（Swin Transformer + U-Net）
-│   ├── datasets/                  #   数据加载器（Synapse 格式）
-│   ├── pretrained_ckpt/           #   预训练权重（ImageNet）
-│   └── best_model.pth             #   在 LithoDefectV1 上的最佳模型
-│
-└── sam/                           # SAM 零样本分割
-    └── SAM-Tool/                  #   基于 SAM 的交互式标注工具
-        ├── segment_anything_annotator.py  # 标注主程序
-        └── cocoviewer.py                  # COCO 标注可视化
+├── README.md
+├── docs/REPRODUCIBILITY.md       # 论文协议、代码行为、资源与验证记录
+├── data.zip                      # Git LFS 数据资源
+├── compute.py                    # 完整配对的二值掩码评估
+├── tests/test_workflow.py         # 与本次修复对应的回归检查
+├── synthesis_pipeline/
+│   ├── run_pipeline.py           # 合成 → 划分 → 格式导出
+│   ├── config.yaml
+│   └── lithodefect/
+├── yolo/                         # 保留本地 Ultralytics 实现及其许可证
+│   ├── trains.py                 # 参数化实例分割训练入口
+│   └── ultralytics/
+├── unet/                         # Swin-UNet、PNG/NPZ 加载器、训练与推理
+│   └── UPSTREAM.md               # 原始 Swin-Unet 说明与引用
+└── sam/                          # SAM 实现与交互式标注工具
 ```
 
----
+上游演示网站、示例、文档构建、测试镜像、缓存和旧日志不作为本基准的运行依赖提交。模型实现、配置、许可证和已有权重入口保留。
 
-## 数据集信息
+## 获取数据与权重
 
-### 解压数据
+请使用 Git 克隆仓库。GitHub 的 ZIP 源码下载可能只包含大文件的 LFS 指针。
 
 ```bash
-unzip data.zip -d ./data
+git clone https://github.com/Hqa77880011/Benchmark.git
+cd Benchmark
+git lfs install
+git lfs pull --include="data.zip"
+python -m zipfile -e data.zip data
 ```
 
-### 解压后结构
-
-```
-data/
-├── images/                        # 原始图像（360×360 px）
-├── masks/                         # 分割掩码（与图像一一对应）
-├── defects/                       # 种子缺陷素材
-│   ├── images/                    #   缺陷抠图（arching / particle / peeling / residue）
-│   └── masks/                     #   对应二值掩码
-└── backgrounds/                   # 背景图像（256×256 px）
-    ├── shen_*.png                 #   公开背景（用于 test_public 集）
-    ├── chip_*.png                 #   私有背景（用于 train/val/test_private 集）
-    └── luhu_*.png                 #   私有背景
-```
-
-### 缺陷类别一览（8 类）
-
-| 编号 | 类别名 | 缺陷类型 | 样本数 | 描述 |
-|:---:|:---|:---|:---:|:---|
-| 0 | **ArchDeform** | 几何变形 | 500 | 图案扭曲（OPC 失效、光刻胶倒塌） |
-| 1 | **Block** | 高深宽比 | 100 | 块状线端缩短 |
-| 2 | **Droplet** | 异物残留 | 350 | 液滴状残留物 |
-| 3 | **Flake** | 异物残留 | 350 | 片状碎屑 |
-| 4 | **Needle** | 高深宽比 | 450 | 针状桥接缺陷 |
-| 5 | **ParticleContam** | 异物污染 | 400 | 颗粒污染物 |
-| 6 | **ResidueLeft** | 工艺残留 | 1000 | 不完全刻蚀/显影残留 |
-| 7 | **Spindle** | 几何变形 | 450 | 纺锤形桥接缺陷 |
-| | | **合计** | **3600** | |
-
-### 数据集划分（分层采样，随机种子 42）
-
-| 子集 | 比例 | 背景来源 | 用途 |
-|:---|:---:|:---|:---|
-| train | 70% | 私有背景 | 模型训练 |
-| val | 10% | 私有背景 | 验证调参 |
-| test_private | 10% | 私有背景 | 闭集测试（同分布） |
-| test_public | 10% | 公开背景 | 开集测试（跨域泛化） |
-
----
-
-## 合成流水线
-
-### 流程图
-
-```
-┌──────────────────────┐
-│  种子缺陷图像 + 掩码  │  ← 从有限真实样本中提取
-└─────────┬────────────┘
-          │
-          ▼
-┌──────────────────────┐
-│  Stage 1: 几何增强   │  随机翻转、旋转、缩放
-│                      │  弹性变形、透视变形、桶形畸变
-└─────────┬────────────┘
-          │
-          ▼
-┌──────────────────────┐
-│  Stage 2: 图像合成   │  高斯羽化 + Alpha 混合
-│                      │  贴到公开/私有背景图案上
-└─────────┬────────────┘
-          │
-          ▼
-┌──────────────────────┐
-│  3600 对合成图像-掩码 │ 360×360 px，像素级精确标注
-└──────────────────────┘
-```
-
-### 关键设计
-
-- **避免中心偏置**：缺陷不会放置在图像正中央（`avoid_center: true`），防止模型学到"缺陷总是在中间"的虚假先验
-- **双背景组策略**：私有背景用于训练集，公开背景用于测试集——模型必须在训练时从未见过的背景上做推理，才能检验真实泛化能力
-- **随机化参数**：每张图像的缩放比例（0.7~1.3）、透视偏移（±10%）、桶形畸变系数（k1∈[-0.3, 0.3]）均独立随机采样
-
-详细说明参见 `synthesis_pipeline/README.md`。
-
----
-
-## 快速开始
-
-### 环境要求
-
-- Python ≥ 3.8
-- PyTorch ≥ 1.10（模型训练需要 GPU；纯合成流水线 CPU 即可）
-
-### 1. 安装依赖
+按需下载已有模型资源，避免一次拉取所有权重：
 
 ```bash
-# 合成流水线
-pip install -r synthesis_pipeline/requirements.txt
-
-# Swin-UNet 训练（需要 GPU）
-pip install -r unet/requirements.txt
-
-# YOLO 训练
-pip install ultralytics
+git lfs pull --include="unet/*.pth,unet/pretrained_ckpt/*.pth,yolo/best_*"
 ```
 
-### 2. 解压数据集
+数据压缩包与模型仍通过原有 LFS 对象提供；本次未下载或验证全部大文件。合成流程要求独立准备种子缺陷图、对应掩码与背景，不能把发布图像集默认当作完整种子素材。具体输入结构见 [合成流水线说明](synthesis_pipeline/README.md)。
+
+## 合成与训练
+
+以下命令从仓库根目录执行。合成 CPU 即可运行，模型训练需另行安装 PyTorch 与模型依赖。
 
 ```bash
-unzip data.zip -d ./data
+python -m pip install -r synthesis_pipeline/requirements.txt
+python synthesis_pipeline/run_pipeline.py --list-steps
+python synthesis_pipeline/run_pipeline.py --config synthesis_pipeline/config.yaml
 ```
 
-### 3. 运行合成流水线（从头生成数据）
+配置中的路径相对于 **YAML 文件所在目录** 解析。默认输入位于 `synthesis_pipeline/data/`，输出位于 `synthesis_pipeline/output/`。同一配置与随机种子可重现生成过程；重新运行时使用空输出目录，避免混入旧样本。
+
+默认划分工具按类别和背景来源生成 70/10/10/10 的 train、val、test/private、test/public，**这是工具的可配置划分，不是论文原始 7:3 划分的索引复刻**。两种背景来源都会进入训练/验证。`test_private` 仍是合成图像，不能当作 Fab-test；`test_public` 也不能直接当作论文 Open-test。论文逐样本划分清单及完整实验环境尚未随本次维护补齐。
+
+YOLO 使用仓库内保留的 Ultralytics 版本，安装和训练：
 
 ```bash
-cd synthesis_pipeline
-
-# 编辑 config.yaml 配置路径和参数
-
-# 一键运行全流程（合成 → 划分 → 导出）
-python run_pipeline.py
-
-# 或分步运行
-python run_pipeline.py --step synthesis    # 仅合成
-python run_pipeline.py --step split       # 仅划分
-python run_pipeline.py --step yolo        # 导出 YOLO 格式
-python run_pipeline.py --step swinunet    # 导出 Swin-UNet 格式
+python -m pip install -e ./yolo
+python yolo/trains.py --data synthesis_pipeline/output/synthetic_yolo/data.yaml --model yolo11n-seg.pt --device 0 --imgsz 384 --epochs 50 --batch 64
 ```
 
-### 4. 训练模型
+`--model` 需要分割模型或分割架构；其他 YOLO 版本请传入对应 checkpoint。本地保留版本见 `yolo/ultralytics/__init__.py`，不依赖自动安装最新版本。
 
-**YOLO 实例分割：**
-
-```bash
-cd yolo
-# 编辑 trains.py 中的 data_yaml_path 和预训练模型路径
-python trains.py
-```
-
-**Swin-UNet 语义分割：**
+Swin-UNet 默认导出二值缺陷标签（背景 0、缺陷 1），与 2 输出通道配套。可选的八类语义分割需设置 `swinunet.binary: false`，并使用 `--num_classes 9`；这属于不同实验设置。
 
 ```bash
+python -m pip install -r unet/requirements.txt
 cd unet
-python train.py \
-    --output_dir ./model_out \
-    --dataset datasets \
-    --img_size 224 \
-    --batch_size 32 \
-    --cfg configs/swin_tiny_patch4_window7_224_lite.yaml \
-    --root_path <数据路径>
+python train.py --root_path ../synthesis_pipeline/output/swin_unet_data --dataset LithoDefect --output_dir ./model_out --num_classes 2 --img_size 224 --batch_size 32 --max_epochs 50
+python test.py --root_path ../synthesis_pipeline/output/swin_unet_data --dataset LithoDefect --output_dir ./model_out --num_classes 2 --split_name test_public
 ```
 
-### 5. 测试/推理
+预训练 Swin-T 权重需先通过 LFS 获取。PNG 数据按现有 train/val 目录读取，验证集不做随机增强；旧 NPZ 数据入口继续支持显式 `--list_dir`。SAM 安装、标注与提示操作见 [SAM 工具说明](sam/SAM-Tool/README.md)。
+
+## 掩码评估
 
 ```bash
-# YOLO 推理
-cd yolo
-yolo predict model=best.pt source=<图片路径>
-
-# Swin-UNet 推理
-cd unet
-python test.py --model best_model.pth --input <输入路径> --output <输出路径>
+python compute.py --gt-dir data/masks --pred-dir results/pred_masks --output-dir results --suffix _mask
 ```
 
-### 6. 评估指标
+预测文件名为 `<GT文件主名><suffix>.png`。预测使用相同文件名时传入 `--suffix ""`。缺失预测、空数据、损坏文件或尺寸不符会报错；确需对齐尺寸时显式传入 `--resize`，使用最近邻插值。
 
-```bash
-python compute.py \
-    --gt-dir ./data/masks \
-    --pred-dir ./results/pred_masks \
-    --output-dir ./results \
-    --suffix _mask
-```
+输出 `metrics_results.txt`，记录样本数、实际文件名、逐图指标和平均指标。默认 `--average image` 为逐图宏平均。若文件主名以 `<Category>_` 开头，可用 `--average category` 先按类别取平均、再对类别等权平均。两种汇总方式不能混用。大于 0 的像素视为前景，零分母按 0 处理。
 
-输出的 `metrics_results.txt` 包含每张图像及整体的 IoU / Dice / Precision / Recall。
+## 修订稿报告的结果
 
----
+以下仅为修订稿表格转录，保留四位小数。SAM 的 Open-test 使用 129 张子集。
 
-## 基准结果
+| 模型 | 测试集 | mIoU | Dice | Precision | Recall |
+| --- | --- | ---: | ---: | ---: | ---: |
+| YOLOv8-seg | Open-test | 0.8508 | 0.9177 | 0.8663 | 0.9786 |
+| YOLOv8-seg | Re-synth-test | 0.8155 | 0.8841 | 0.8320 | 0.9435 |
+| YOLOv8-seg | Fab-test | 0.8130 | 0.8813 | 0.8301 | 0.9422 |
+| YOLOv9-seg | Open-test | 0.8552 | 0.9203 | 0.8722 | 0.9770 |
+| YOLOv9-seg | Re-synth-test | 0.8202 | 0.8878 | 0.8394 | 0.9420 |
+| YOLOv9-seg | Fab-test | 0.8185 | 0.8860 | 0.8375 | 0.9411 |
+| YOLOv11-seg | Open-test | 0.8530 | 0.9190 | 0.8687 | 0.9784 |
+| YOLOv11-seg | Re-synth-test | 0.8164 | 0.8847 | 0.8336 | 0.9442 |
+| YOLOv11-seg | Fab-test | 0.8170 | 0.8845 | 0.8352 | 0.9428 |
+| YOLOv12-seg | Open-test | 0.8492 | 0.9168 | 0.8631 | 0.9807 |
+| YOLOv12-seg | Re-synth-test | 0.8120 | 0.8820 | 0.8271 | 0.9470 |
+| YOLOv12-seg | Fab-test | 0.8144 | 0.8828 | 0.8292 | 0.9453 |
+| SAM (zero-shot) | Open-test (129) | 0.7884 | 0.8798 | 0.9978 | 0.7896 |
+| SAM (zero-shot) | Re-synth-test | 0.7412 | 0.8365 | 0.9590 | 0.7408 |
+| SAM (zero-shot) | Fab-test | 0.7480 | 0.8398 | 0.9594 | 0.7487 |
+| Swin-UNet | Open-test | 0.8725 | 0.9273 | 0.9344 | 0.9260 |
+| Swin-UNet | Re-synth-test | 0.8280 | 0.8921 | 0.8905 | 0.8804 |
+| Swin-UNet | Fab-test | 0.8348 | 0.8927 | 0.8934 | 0.8849 |
 
-以下结果来自论文中的对比实验（Open-test = test_public 集，360×360 输入分辨率）：
+## 引用与许可
 
-| 模型 | 测试集 | mIoU | Dice | Precision | Recall | 备注 |
-|:---|:---|:---:|:---:|:---:|:---:|:---|
-| YOLOv8 | Open-test | 0.851 | 0.918 | 0.866 | 0.979 | 单阶段实例分割 |
-| YOLOv9 | Open-test | 0.855 | 0.920 | 0.872 | 0.977 | PGI + GELAN 架构 |
-| YOLOv11 | Open-test | 0.853 | 0.919 | 0.869 | 0.978 | Ultralytics 最新版 |
-| YOLOv12 | Open-test | 0.849 | 0.917 | 0.863 | 0.981 | 基于注意力机制 |
-| SAM (zero-shot) | Open-test | 0.788 | 0.880 | **0.998** | 0.790 | 零样本，不做训练 |
-| **Swin-UNet** | Open-test | **0.873** | **0.927** | 0.934 | 0.926 | 🏆 Transformer 语义分割 |
-
-### 关键发现
-
-1. **Swin-UNet 精度最优**：Transformer 的全局自注意力机制捕获了光刻缺陷的长程形态特征，mIoU 和 Dice 均为最高
-2. **YOLO 系列速度最快**：在精度仅略低（~2% mIoU）的情况下，推理速度远超 Transformer 方案，适合在线产线部署
-3. **SAM 零样本的启示**：Precision 高达 0.998（几乎不误检），但 Recall 仅 0.790（漏检严重），说明通用大模型直接用于专业领域仍需适配
-
----
-
-## Python API 使用
-
-合成流水线支持 Python 编程方式调用：
-
-```python
-from lithodefect.synthesis import Synthesizer
-from lithodefect.split import split_dataset
-from lithodefect.export_yolo import export_to_yolo
-from lithodefect.export_swinunet import export_to_swinunet
-from lithodefect.dataset import LithoDefectDataset
-
-# Step 1: 合成
-syn = Synthesizer({...})  # 配置字典同 config.yaml
-syn.run()
-
-# Step 2: 划分
-split_dataset("output/synthetic_defects", "output/split", seed=42)
-
-# Step 3: 导出
-export_to_yolo("output/split", "output/yolo", class_mapping={...})
-export_to_swinunet("output/split", "output/swin_unet", class_mapping={...})
-
-# Step 4: 在 PyTorch 训练中使用
-dataset = LithoDefectDataset("output/swin_unet/train", mode='train')
-img, mask = dataset[0]  # img: (3, H, W) Tensor, mask: (H, W) Tensor
-```
-
----
-
-## 引用
-
-如果您在研究中使用了 LithoDefectV1 数据集或合成流水线，请引用：
+论文仍在审稿阶段，暂不填写已发表期刊卷期、页码或 DOI。
 
 ```bibtex
-@article{hu2025lithodefect,
-  title    = {Advancing Lithography Process Control in Integrated Circuit
-              Manufacturing via a Synthetic Benchmark for Defect Segmentation},
-  author   = {Hu, Qinao and Shen, Jiwei},
-  journal  = {IEEE Transactions on Semiconductor Manufacturing},
-  year     = {2025},
-  note     = {Under review}
+@unpublished{hu_lithodefect_revision,
+  title = {Advancing Lithography Process Control in Integrated Circuit Manufacturing via a Synthetic Benchmark for Defect Segmentation},
+  author = {Hu, Qinao and Shen, Jiwei},
+  note = {Manuscript under review at IEEE Transactions on Semiconductor Manufacturing; major revision completed}
 }
 ```
 
----
+数据集沿用原 README 声明的 CC BY 4.0，自有代码沿用原 README 的 MIT 声明。第三方目录保留各自的许可证：YOLO 见 [yolo/LICENSE](yolo/LICENSE)，SAM 见 [sam/segment-anything/LICENSE](sam/segment-anything/LICENSE) 与 [sam/SAM-Tool/LICENSE](sam/SAM-Tool/LICENSE)。根目录的许可声明不覆盖这些第三方代码。
 
-## 许可证
-
-- 本项目代码采用 [MIT License](https://opensource.org/licenses/MIT)
-- LithoDefectV1 数据集采用 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 协议发布
-
----
-
-## 联系方式
-
-- **代码与数据集问题**：[GitHub Issues](https://github.com/Hqa77880011/Benchmark/issues)
-- **邮件**：qinaoH@stu.ecnu.edu.cn
+代码与数据问题请通过 [GitHub Issues](https://github.com/Hqa77880011/Benchmark/issues) 反馈。

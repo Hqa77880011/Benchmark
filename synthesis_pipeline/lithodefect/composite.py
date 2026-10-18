@@ -119,6 +119,7 @@ def composite(foreground, mask, background,
     blended = (roi.astype(np.float32) * (1 - alpha)
                + foreground.astype(np.float32) * alpha)
     bg[y:y + fg_h, x:x + fg_w] = blended.astype(np.uint8)
-    full_mask[y:y + fg_h, x:x + fg_w] = mk
+    # Feathering controls image blending only; labels retain discrete geometry.
+    full_mask[y:y + fg_h, x:x + fg_w] = np.where(mask > 127, 255, 0).astype(np.uint8)
 
     return bg, full_mask
