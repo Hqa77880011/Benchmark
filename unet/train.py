@@ -32,7 +32,7 @@ parser.add_argument('--img_size', type=int,
 parser.add_argument('--seed', type=int,
                     default=1234, help='random seed')
 parser.add_argument('--cfg', type=str, default=str(Path(__file__).parent / 'configs/swin_tiny_patch4_window7_224_lite.yaml'),
-                     metavar="FILE", help='you', )
+                     metavar="FILE", help='Swin configuration YAML', )
 parser.add_argument(
     "--opts",
     help="Modify config options by adding 'KEY VALUE' pairs. ",
@@ -53,7 +53,6 @@ parser.add_argument('--amp-opt-level', type=str, default='O1', choices=['O0', 'O
 parser.add_argument('--tag', help='tag of experiment')
 parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
 parser.add_argument('--throughput', action='store_true', help='Test throughput only')
-# parser.add_argument("--dataset_name", default="datasets")
 parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
 parser.add_argument("--num_workers", default=8, type=int)
 parser.add_argument("--eval_interval", default=1, type=int)
@@ -88,8 +87,4 @@ if __name__ == "__main__":
     net = ViT_seg(config, img_size=args.img_size, num_classes=args.num_classes).to(args.device)
     net.load_from(config)
 
-    # trainer = {'Synapse': trainer_synapse}
     trainer_synapse(args, net, args.output_dir)
-
-
-# python train.py --output_dir ./model_out/datasets --dataset datasets --img_size 224 --batch_size 32 --cfg configs/swin_tiny_patch4_window7_224_lite.yaml --root_path /media/aicvi/11111bdb-a0c7-4342-9791-36af7eb70fc0/NNUNET_OUTPUT/nnunet_preprocessed/Dataset001_mm/nnUNetPlans_2d_split
